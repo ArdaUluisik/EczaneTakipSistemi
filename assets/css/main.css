@@ -1,0 +1,31 @@
+:root {
+    /* ECZANE KIRMIZISI PALETİ */
+    --ana-renk: #e63946;       /* Canlı, modern bir kırmızı */
+    --koyu-renk: #d90429;      /* Hover için koyu kırmızı */
+    --metin-renk: #2b2d42;     /* Siyah yerine çok koyu lacivert (göz yormaz) */
+    --gri-renk: #8d99ae;       /* Pasif yazılar için */
+    --arka-plan: #f8f9fa;      /* Bembeyaz değil, göz almayan çok açık gri */
+    --beyaz: #ffffff;
+    
+    --yazi-fontu: 'Poppins', sans-serif;
+    --golge: 0 10px 30px rgba(230, 57, 70, 0.15); /* Hafif kırmızımsı gölge */
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--yazi-fontu);
+    color: var(--metin-renk);
+}
+
+/* Genel Buton Standardı */
+.btn {
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.3s;
+}

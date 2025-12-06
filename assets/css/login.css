@@ -1,0 +1,191 @@
+/* --- SAYFA GENEL YAPISI --- */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--yazi-fontu);
+    
+    /* DEĞİŞİKLİK BURADA: Sabit yükseklik yerine minimum yükseklik verdik */
+    min-height: 100vh; 
+    
+    /* DEĞİŞİKLİK BURADA: Kaydırma çubuğunu (scroll) serbest bıraktık */
+    overflow-y: auto; 
+    
+    display: flex;
+    flex-direction: column;
+    
+    /* Arka Plan Deseni */
+    background-color: #f0f2f5; 
+    background-image: radial-gradient(#e63946 0.5px, transparent 0.5px);
+    background-size: 20px 20px;
+}
+
+/* --- LOGIN NAVBAR --- */
+.login-nav {
+    width: 100%;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    /* Navbar'ın sayfa kayınca gitmemesi için sticky yapabiliriz ama şimdilik normal kalsın */
+}
+
+.nav-back-link {
+    text-decoration: none;
+    color: var(--ana-renk);
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    
+    background: white;
+    padding: 10px 25px;
+    border-radius: 30px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.nav-back-link:hover {
+    background: var(--ana-renk);
+    color: white;
+    transform: translateX(-5px);
+    box-shadow: 0 6px 15px rgba(230, 57, 70, 0.2);
+}
+
+/* --- ORTALAMA KAPSAYICISI (Wrapper) --- */
+.login-wrapper {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    
+    /* DEĞİŞİKLİK BURADA: Alttan ve üstten boşluk verdik ki kutu sıkışmasın */
+    padding: 40px 0; 
+}
+
+/* --- GİRİŞ KARTI TASARIMI --- */
+.login-container {
+    background-color: var(--beyaz);
+    width: 380px;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    
+    /* Mobilde taşmayı önlemek için */
+    max-width: 90%; 
+}
+
+.card-top-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: var(--ana-renk);
+}
+
+/* --- LOGO VE BAŞLIK --- */
+.brand-logo {
+    max-width: 120px; 
+    margin-bottom: 10px;
+}
+
+.login-header h2 {
+    margin: 10px 0 5px;
+    color: var(--ana-renk); 
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.login-header p {
+    color: var(--gri-renk);
+    font-size: 14px;
+    margin-top: 0;
+    margin-bottom: 25px;
+}
+
+/* --- INPUT ALANLARI --- */
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 14px 14px 45px;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: 0.3s;
+    font-family: var(--yazi-fontu);
+    color: var(--metin-renk);
+    background-color: #fcfcfc;
+}
+
+.input-group i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ccc;
+    transition: 0.3s;
+    font-size: 16px;
+}
+
+.input-group input:focus {
+    border-color: var(--ana-renk);
+    background-color: white;
+    box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1); 
+}
+
+.input-group input:focus + i {
+    color: var(--ana-renk);
+}
+
+/* --- LİNKLER VE BUTON --- */
+.form-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 25px;
+}
+
+.forgot-pass {
+    text-decoration: none;
+    font-size: 13px;
+    color: var(--gri-renk);
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.forgot-pass:hover {
+    color: var(--ana-renk);
+    text-decoration: underline;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--ana-renk);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);
+    transition: transform 0.2s, background-color 0.3s;
+}
+
+.btn-login:hover {
+    background-color: var(--koyu-renk);
+    transform: translateY(-2px);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}

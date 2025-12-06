@@ -1,0 +1,203 @@
+/* --- GENEL AYARLAR --- */
+:root {
+    --ana-renk: #e63946;       /* Kırmızı ton */
+    --koyu-renk: #d62828;      /* Hover için koyu ton */
+    --metin-renk: #2b2d42;     /* Koyu gri metin */
+    --gri-border: #e0e0e0;     /* İnce çizgiler için */
+}
+
+/* --- NAVBAR DÜZENİ --- */
+.navbar {
+    background-color: white;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.04); /* Çok hafif gölge */
+    padding: 15px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.nav-brand {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ana-renk);
+    letter-spacing: -0.5px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 25px; /* Linkler arası boşluk */
+}
+
+.nav-link {
+    text-decoration: none;
+    color: var(--metin-renk);
+    font-weight: 500;
+    font-size: 15px;
+    transition: color 0.3s;
+}
+
+.nav-link:hover {
+    color: var(--ana-renk);
+}
+
+/* Personel Giriş Butonu */
+.btn-staff-login {
+    text-decoration: none;
+    background-color: var(--ana-renk);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(230, 57, 70, 0.2);
+}
+
+.btn-staff-login:hover {
+    background-color: var(--koyu-renk);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(230, 57, 70, 0.3);
+}
+
+/* --- HERO SECTION (Arama Alanı Arka Planı) --- */
+.hero-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 100px 20px;
+    text-align: center;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    color: var(--metin-renk);
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.hero-content p {
+    color: #6c757d;
+    font-size: 1.2rem;
+    margin-bottom: 50px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* --- MODERN ARAMA BARI (Tek Parça Kapsül Tasarım) --- */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 50px; /* Tam yuvarlak köşeler */
+    padding: 8px;        /* Dış çerçeve ile içerik arası */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08); /* Kaliteli gölge */
+    max-width: 1000px;   /* Genişlik */
+    margin: 0 auto;      /* Ortala */
+    border: 1px solid rgba(0,0,0,0.05); /* Çok silik çerçeve */
+}
+
+/* Ortak Özellikler (Select ve Input için) */
+.location-select, 
+#searchInput {
+    border: none;
+    background: transparent;
+    padding: 15px 20px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 15px;
+    color: #495057;
+    outline: none;
+}
+
+/* Şehir ve İlçe Kutuları */
+.location-select {
+    width: 22%; /* Genişlik payı */
+    cursor: pointer;
+    border-right: 1px solid var(--gri-border); /* Sağ tarafa ayırıcı çizgi */
+    appearance: none; /* Varsayılan ok işaretini kaldır (daha temiz) */
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='gray' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 15px;
+}
+
+/* İlaç Arama Kutusu */
+#searchInput {
+    flex-grow: 1; /* Kalan boşluğu doldur */
+    color: #333;
+    font-weight: 500;
+}
+
+/* Arama Butonu */
+.search-wrapper button {
+    background-color: var(--ana-renk);
+    color: white;
+    border: none;
+    padding: 14px 40px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap; /* Yazı asla alt satıra geçmesin */
+}
+
+.search-wrapper button:hover {
+    background-color: var(--koyu-renk);
+    transform: scale(1.02);
+}
+
+/* --- SONUÇ KARTLARI --- */
+.results-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* --- MOBİL UYUMLULUK (Zorunlu) --- */
+@media (max-width: 992px) {
+    .search-wrapper {
+        flex-direction: column; /* Alt alta diz */
+        border-radius: 20px;    /* Köşeleri biraz düzelt */
+        padding: 20px;
+        gap: 15px;
+    }
+
+    .location-select, 
+    #searchInput {
+        width: 100%;       /* Tam genişlik */
+        border-right: none; /* Yan çizgiyi kaldır */
+        border-bottom: 1px solid var(--gri-border); /* Alt çizgi ekle */
+        padding: 12px 0;   /* Dikey boşluk */
+        background-position: right 0 center; /* Oku sağa yasla */
+    }
+
+    /* Son elemanın alt çizgisini kaldır */
+    #searchInput {
+        border-bottom: none;
+    }
+
+    .search-wrapper button {
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+        padding: 16px;
+    }
+    
+    .hero-content h1 {
+        font-size: 2rem; /* Mobilde başlığı küçült */
+    }
+}
