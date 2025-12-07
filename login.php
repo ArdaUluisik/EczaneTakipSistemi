@@ -8,26 +8,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $tc = $_POST['tcno'];
     $sifre = $_POST['sifre'];
 
-    // Procedure Kullanımı
-    $sql = "CALL sp_PersonelGiris(:tc, :sifre)";
+    // 1. GÜNCELLEME: Personel ve Eczane tablolarını birleştiren sorgu
+    // Bu sayede personelin hangi eczanede çalıştığını öğreniyoruz.
+    $sql = "SELECT p.*, e.EczaneAdi 
+            FROM personel p 
+            JOIN eczaneler e ON p.EczaneID = e.EczaneID 
+            WHERE p.TCNo = :tc AND p.Sifre = :sifre";
     
     try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['tc' => $tc, 'sifre' => $sifre]);
-        $personel = $stmt->fetch();
+        $personel = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($personel) {
+            // 2. GÜNCELLEME: Panele lazım olan bilgileri oturuma kaydet
             $_SESSION['personel_id'] = $personel['PersonelID'];
-            $_SESSION['ad_soyad'] = $personel['AdSoyad'];
+            $_SESSION['personel_adi'] = $personel['AdSoyad']; // Panelde "Hoşgeldin Ahmet" demek için
+            $_SESSION['eczane_id'] = $personel['EczaneID'];     // Panelde hangi ilaçları göstereceğimizi bilmek için
+            $_SESSION['eczane_adi'] = $personel['EczaneAdi'];   // Panel başlığı için
             
-            // Başarılıysa panele gönder (Panel sayfası henüz yoksa index'e atar)
-            header("Location: index.php"); 
+            // 3. GÜNCELLEME: Doğrudan yönetim paneline yönlendir
+            header("Location: eczane-panel.php"); 
             exit;
         } else {
             $hataMesaji = "TC Kimlik Numaranız veya Şifreniz hatalı.";
         }
     } catch (PDOException $e) {
-        $hataMesaji = "Bir hata oluştu.";
+        $hataMesaji = "Bir hata oluştu: " . $e->getMessage();
     }
 }
 ?>
@@ -53,12 +60,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="login-wrapper">
         <div class="login-container">
-            <div class="card-top-line"></div>
+            <div class="card-top-line" style="background: #e63946;"></div>
 
             <div class="login-header">
                 <img src="assets/img/logo.png" alt="e-Ecza Logo" class="brand-logo" onerror="this.style.display='none'">
                 <h2>Personel Girişi</h2>
-                <p>Lütfen yetkili bilgilerinizi giriniz.</p>
+                <p>Eczane yönetim paneline erişmek için giriş yapın.</p>
 
                 <?php if(!empty($hataMesaji)): ?>
                     <div style="background-color: #ffebee; color: #c62828; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 0.9rem; text-align: center;">
@@ -83,11 +90,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <a href="#" class="forgot-pass">Şifremi Unuttum?</a>
                 </div>
 
-                <button type="submit" class="btn-login">Sisteme Giriş Yap</button>
+                <button type="submit" class="btn-login" style="background-color: #e63946;">Yönetim Paneline Gir</button>
             </form>
         </div>
     </div>
 
-    <script src="assets/js/auth.js"></script>
 </body>
 </html>

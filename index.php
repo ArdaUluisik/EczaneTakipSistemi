@@ -1,5 +1,15 @@
 <?php
-// PHP MOTORU (Değişiklik Yok)
+session_start(); // Oturumu başlat
+
+// --- GÜVENLİK DUVARI ---
+// Eğer giriş yapan kişi PERSONEL ise, bu sayfayı göremez!
+if (isset($_SESSION['personel_id'])) {
+    // Onu kendi paneline yönlendir
+    header("Location: eczane-panel.php");
+    exit;
+}
+// -----------------------
+
 require 'db.php'; 
 error_reporting(0);
 
@@ -11,6 +21,7 @@ $sonuclar = [];
 
 if ($gelenIlac != "" && $gelenIlce != "") {
     try {
+        // İlaç arama işlemi
         $sql = "CALL sp_IlacBul(:ilac, :ilce)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['ilac' => $gelenIlac, 'ilce' => $gelenIlce]);
@@ -34,19 +45,7 @@ if ($gelenIlac != "" && $gelenIlce != "") {
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand" style="display: flex; align-items: center;">
-                <img src="assets/img/logo.png" alt="Logo" style="height: 35px; margin-right: 10px;" onerror="this.style.display='none'">
-                e-Ecza
-            </div>
-            <div class="nav-right">
-                <a href="#" class="nav-link">Nöbetçi Eczaneler</a>
-                <a href="hasta-login.php" class="nav-link">Hasta / Üye Girişi</a>
-                <a href="login.php" class="btn-staff-login">Personel Girişi</a>
-            </div>
-        </div>
-    </nav>
+    <?php include 'navbar.php'; ?>
 
     <header class="hero-section">
         <div class="hero-content">

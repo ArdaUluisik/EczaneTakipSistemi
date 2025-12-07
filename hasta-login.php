@@ -9,28 +9,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $tc = $_POST['tcno'];
     $sifre = $_POST['sifre'];
 
-    // SQL Procedure Çağrısı: sp_HastaGiris
-    // Bu prosedürü MySQL'de oluşturmuştuk, hatırladın mı?
-    $sql = "CALL sp_HastaGiris(:tc, :sifre)";
+    // GÜNCELLEME: Stored Procedure yerine standart sorgu kullanıyoruz.
+    // Çünkü 'hastalar' tablosunu oluşturduk ama prosedür oluşturmadık.
+    $sql = "SELECT * FROM hastalar WHERE TCNo = :tc AND Sifre = :sifre";
     
     try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['tc' => $tc, 'sifre' => $sifre]);
-        $hasta = $stmt->fetch();
+        $hasta = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($hasta) {
             // Giriş Başarılı: Oturum aç
             $_SESSION['hasta_id'] = $hasta['HastaID'];
             $_SESSION['ad_soyad'] = $hasta['AdSoyad'];
             
-            // Hastayı ana sayfaya yönlendir (İleride sipariş ekranına da yönlendirebilirsin)
+            // Hastayı ana sayfaya yönlendir
             header("Location: index.php"); 
             exit;
         } else {
             $hataMesaji = "TC Kimlik No veya Şifre hatalı!";
         }
     } catch (PDOException $e) {
-        $hataMesaji = "Sistem hatası oluştu.";
+        $hataMesaji = "Sistem hatası: " . $e->getMessage();
     }
 }
 ?>
@@ -99,7 +99,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                 <p style="margin: 0; font-size: 14px; color: #7f8c8d;">Hesabınız yok mu?</p>
-                <a href="#" style="color: var(--ana-renk); font-weight: 600; text-decoration: none; display: inline-block; margin-top: 5px;">
+                <a href="hasta-kayit.php" style="color: var(--ana-renk); font-weight: 600; text-decoration: none; display: inline-block; margin-top: 5px;">
                     Hasta Kaydı Oluştur
                 </a>
             </div>
