@@ -64,7 +64,7 @@ CREATE TABLE `eczanestok` (
   KEY `IlacID` (`IlacID`),
   CONSTRAINT `eczanestok_ibfk_1` FOREIGN KEY (`EczaneID`) REFERENCES `eczaneler` (`EczaneID`) ON DELETE CASCADE,
   CONSTRAINT `eczanestok_ibfk_2` FOREIGN KEY (`IlacID`) REFERENCES `ilaclar` (`IlacID`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -73,7 +73,7 @@ CREATE TABLE `eczanestok` (
 
 LOCK TABLES `eczanestok` WRITE;
 /*!40000 ALTER TABLE `eczanestok` DISABLE KEYS */;
-INSERT INTO `eczanestok` VALUES (1,1,1,50,45.50),(2,1,2,100,25.00),(3,2,3,20,85.00),(4,3,1,10,50.00);
+INSERT INTO `eczanestok` VALUES (2,1,1,24,60.00);
 /*!40000 ALTER TABLE `eczanestok` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -102,7 +102,7 @@ CREATE TABLE `hastalar` (
 
 LOCK TABLES `hastalar` WRITE;
 /*!40000 ALTER TABLE `hastalar` DISABLE KEYS */;
-INSERT INTO `hastalar` VALUES (1,'33333333333','1234','Mehmet Hasta','0555 111 22 33',NULL);
+INSERT INTO `hastalar` VALUES (1,'14275166798','1234','Arda Uluışık','5066898325','Mamak');
 /*!40000 ALTER TABLE `hastalar` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -119,9 +119,10 @@ CREATE TABLE `ilaclar` (
   `Barkod` varchar(50) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
   `Aciklama` text COLLATE utf8mb4_turkish_ci,
   `ResimYolu` varchar(255) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
+  `ReceteTuru` enum('Normal','Kirmizi','Sari','Yesil') COLLATE utf8mb4_turkish_ci DEFAULT 'Normal',
   PRIMARY KEY (`IlacID`),
   UNIQUE KEY `Barkod` (`Barkod`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -130,7 +131,7 @@ CREATE TABLE `ilaclar` (
 
 LOCK TABLES `ilaclar` WRITE;
 /*!40000 ALTER TABLE `ilaclar` DISABLE KEYS */;
-INSERT INTO `ilaclar` VALUES (1,'Aspirin','8690001','Ağrı kesici',NULL),(2,'Parol','8690002','Ateş düşürücü',NULL),(3,'Majezik','8690003','Diş ağrısı',NULL),(4,'Augmentin','8690004','Antibiyotik',NULL);
+INSERT INTO `ilaclar` VALUES (1,'Aspirin','86999203','Açıklama girilmedi',NULL,'Sari');
 /*!40000 ALTER TABLE `ilaclar` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -200,7 +201,7 @@ CREATE TABLE `nobetcizelgesi` (
   PRIMARY KEY (`NobetID`),
   KEY `EczaneID` (`EczaneID`),
   CONSTRAINT `nobetcizelgesi_ibfk_1` FOREIGN KEY (`EczaneID`) REFERENCES `eczaneler` (`EczaneID`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -209,7 +210,7 @@ CREATE TABLE `nobetcizelgesi` (
 
 LOCK TABLES `nobetcizelgesi` WRITE;
 /*!40000 ALTER TABLE `nobetcizelgesi` DISABLE KEYS */;
-INSERT INTO `nobetcizelgesi` VALUES (1,1,'2025-12-06','Sabaha kadar açık');
+INSERT INTO `nobetcizelgesi` VALUES (1,1,'2025-12-09','Sabaha kadar açık'),(2,1,'2025-12-09','Sabah 08:00\'e kadar açık'),(3,2,'2025-12-09','24 Saat Açık');
 /*!40000 ALTER TABLE `nobetcizelgesi` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -314,4 +315,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-06 13:50:24
+-- Dump completed on 2025-12-09 15:11:58

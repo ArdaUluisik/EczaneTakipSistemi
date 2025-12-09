@@ -1,48 +1,48 @@
 <?php
-require 'db.php'; // Veritabanı bağlantısı
+require 'db.php'; 
 
 $mesaj = "";
-$mesajTuru = ""; // success veya error
+$mesajTuru = ""; 
 
 if ($_POST) {
-    // Formdan gelen verileri al
     $tc = $_POST['tc'];
     $adsoyad = $_POST['adsoyad'];
     $telefon = $_POST['telefon'];
     $adres = $_POST['adres'];
     $sifre = $_POST['sifre'];
 
-    // 1. Basit Doğrulama
     if (empty($tc) || empty($adsoyad) || empty($sifre)) {
         $mesaj = "Lütfen zorunlu alanları (TC, Ad Soyad, Şifre) doldurunuz.";
         $mesajTuru = "error";
     } else {
         try {
-            // 2. Aynı TCNo var mı kontrol et
-            $kontrol = $pdo->prepare("SELECT * FROM hastalar WHERE TCNo = ?");
-            $kontrol->execute([$tc]);
+            // Sadece Procedure Çağırıyoruz
+            // Mantık (TC Kontrolü vs.) tamamen veritabanında yapılıyor
+            $sql = "CALL sp_HastaKayit(:tc, :ad, :tel, :adr, :sif)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                'tc' => $tc,
+                'ad' => $adsoyad,
+                'tel' => $telefon,
+                'adr' => $adres,
+                'sif' => $sifre
+            ]);
             
-            if ($kontrol->rowCount() > 0) {
-                $mesaj = "Bu TC Kimlik numarası ile zaten kayıtlı bir hasta var.";
-                $mesajTuru = "error";
-            } else {
-                // 3. Kayıt İşlemi
-                $sql = "INSERT INTO hastalar (TCNo, AdSoyad, Telefon, Adres, Sifre) VALUES (?, ?, ?, ?, ?)";
-                $stmt = $pdo->prepare($sql);
-                $sonuc = $stmt->execute([$tc, $adsoyad, $telefon, $adres, $sifre]);
+            $sonuc = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if ($sonuc) {
-                    $mesaj = "Kayıt başarıyla oluşturuldu! Giriş sayfasına yönlendiriliyorsunuz...";
-                    $mesajTuru = "success";
-                    // 2 saniye sonra giriş sayfasına at
-                    header("refresh:2;url=hasta-login.php"); 
-                } else {
-                    $mesaj = "Kayıt sırasında bir hata oluştu.";
-                    $mesajTuru = "error";
-                }
+            if ($sonuc['Sonuc'] == 1) {
+                // Başarılı
+                $mesaj = "✅ " . $sonuc['Mesaj'] . " Giriş sayfasına yönlendiriliyorsunuz...";
+                $mesajTuru = "success";
+                header("refresh:2;url=hasta-login.php"); 
+            } else {
+                // Hata (Zaten kayıtlı vs.)
+                $mesaj = "❌ " . $sonuc['Mesaj'];
+                $mesajTuru = "error";
             }
+
         } catch (PDOException $e) {
-            $mesaj = "Veritabanı Hatası: " . $e->getMessage();
+            $mesaj = "Sistem Hatası: " . $e->getMessage();
             $mesajTuru = "error";
         }
     }

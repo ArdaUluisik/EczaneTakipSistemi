@@ -3,7 +3,7 @@
 $host = 'localhost';
 $dbname = 'EczaneDB';
 $username = 'root';
-$password = ''; // BURAYA KENDİ MYSQL ŞİFRENİ YAZ! (Yoksa boş bırak: '')
+$password = 'a04u2004'; // BURAYA KENDİ MYSQL ŞİFRENİ YAZ! (Yoksa boş bırak: '')
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);

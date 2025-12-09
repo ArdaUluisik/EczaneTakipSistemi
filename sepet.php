@@ -1,0 +1,356 @@
+<?php
+session_start();
+require 'db.php'; 
+
+error_reporting(0);
+
+// Sepetten ürün silme
+if (isset($_GET['sil'])) {
+    $silinecekID = $_GET['sil'];
+    unset($_SESSION['sepet'][$silinecekID]);
+    header("Location: sepet.php");
+    exit;
+}
+
+// Sepeti Boşaltma
+if (isset($_GET['bosalt'])) {
+    unset($_SESSION['sepet']);
+    header("Location: sepet.php");
+    exit;
+}
+
+// --- SİPARİŞİ TAMAMLAMA VE STOKTAN DÜŞME İŞLEMİ ---
+if (isset($_POST['siparis_onayla'])) {
+
+    // 1. GÜVENLİK: Giriş kontrolü
+    if (!isset($_SESSION['hasta_id'])) {
+        echo "<script>alert('Lütfen önce giriş yapınız.'); window.location.href='hasta-login.php';</script>";
+        exit;
+    }
+    
+    $teslimat = $_POST['teslimat_turu'];
+    $odeme    = $_POST['odeme_turu'];
+    
+    // 2. STOK GÜNCELLEME OPERASYONU
+    try {
+        $pdo->beginTransaction(); // İşlemi başlat (Hata olursa geri alırız)
+
+        foreach ($_SESSION['sepet'] as $ilacID => $adet) {
+            
+            // A. Hangi eczaneden düşeceğiz? (En ucuz fiyatı verenden düşelim - Mantık gereği)
+            // Bu sorgu, o ilaca sahip ve stoğu yeten en ucuz eczaneyi bulur.
+            $stokBul = $pdo->prepare("SELECT StokID FROM eczanestok WHERE IlacID = ? AND Adet >= ? ORDER BY Fiyat ASC LIMIT 1");
+            $stokBul->execute([$ilacID, $adet]);
+            $stokKaydi = $stokBul->fetch(PDO::FETCH_ASSOC);
+
+            if ($stokKaydi) {
+                // B. Stoğu Düş (UPDATE)
+                $stokGuncelle = $pdo->prepare("UPDATE eczanestok SET Adet = Adet - ? WHERE StokID = ?");
+                $stokGuncelle->execute([$adet, $stokKaydi['StokID']]);
+            } else {
+                // Eğer stok yetersizse hata fırlat
+                throw new Exception("Bazı ilaçlar için yeterli stok bulunamadı. ID: " . $ilacID);
+            }
+        }
+
+        $pdo->commit(); // Her şey yolundaysa işlemi onayla
+        
+        // 3. SEPETİ TEMİZLE VE MESAJ VER
+        unset($_SESSION['sepet']);
+        
+        $mesaj = "Siparişiniz Başarıyla Alındı! Stoklar güncellendi.";
+        if ($teslimat == 'kurye') $mesaj .= "\\nKurye yola çıkacak.";
+        else $mesaj .= "\\nEczaneden teslim alabilirsiniz.";
+
+        echo "<script>alert('$mesaj'); window.location.href='index.php';</script>";
+        exit;
+
+    } catch (Exception $e) {
+        $pdo->rollBack(); // Hata varsa hiçbir şeyi değiştirme
+        echo "<script>alert('Hata oluştu: " . $e->getMessage() . "'); window.location.href='sepet.php';</script>";
+        exit;
+    }
+}
+
+// Sepet Verilerini Çekme (Değişmedi)
+$sepetUrunleri = [];
+$toplamTutar = 0;
+
+if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
+    $ids = array_keys($_SESSION['sepet']);
+    $idListesi = implode(',', $ids);
+
+    $sql = "SELECT i.IlacID, i.IlacAdi, i.ResimYolu, i.ReceteTuru, MIN(es.Fiyat) as BirimFiyat 
+            FROM ilaclar i 
+            JOIN eczanestok es ON i.IlacID = es.IlacID 
+            WHERE i.IlacID IN ($idListesi) 
+            GROUP BY i.IlacID";
+            
+    $stmt = $pdo->query($sql);
+    $dbUrunler = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($dbUrunler as $urun) {
+        $adet = $_SESSION['sepet'][$urun['IlacID']];
+        $araToplam = $urun['BirimFiyat'] * $adet;
+        $toplamTutar += $araToplam;
+
+        $urun['Adet'] = $adet;
+        $urun['AraToplam'] = $araToplam;
+        $sepetUrunleri[] = $urun;
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>e-Ecza | Sepetim</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="assets/css/main.css">
+    
+    <style>
+        body { margin: 0; font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
+        
+        .cart-header {
+            background: linear-gradient(135deg, #d62828 0%, #c0392b 100%);
+            color: white; padding: 60px 20px 90px;
+            text-align: center; border-radius: 0 0 50% 50% / 30px; margin-bottom: 30px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+
+        .cart-wrapper {
+            background: white; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px; margin-top: -70px; position: relative; z-index: 10; margin-bottom: 50px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: #95a5a6; font-weight: 600; font-size: 14px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0; }
+        td { padding: 25px 0; border-bottom: 1px solid #f9f9f9; vertical-align: middle; }
+        
+        .product-info { display: flex; align-items: center; gap: 20px; }
+        .product-img { width: 70px; height: 70px; border-radius: 12px; object-fit: contain; border: 1px solid #eee; padding: 5px; background: #fff; }
+        .product-name { font-weight: 700; color: #2c3e50; font-size: 16px; margin-bottom: 5px; }
+        
+        .qty-badge { background: #f8f9fa; padding: 8px 18px; border-radius: 50px; font-weight: 700; color: #333; border: 1px solid #eee; font-size: 14px; }
+        .price-text { font-weight: 700; color: #2ecc71; font-size: 17px; }
+        
+        .btn-remove { color: #ff6b6b; cursor: pointer; transition: 0.2s; font-size: 18px; }
+        .btn-remove:hover { color: #c0392b; transform: scale(1.1); }
+
+        .cart-footer { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+            margin-top: 40px; padding-top: 30px; border-top: 2px solid #f0f0f0;
+        }
+        
+        .total-price { font-size: 28px; font-weight: 800; color: #2c3e50; }
+        
+        .btn-checkout {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white; padding: 15px 45px; border-radius: 50px; 
+            text-decoration: none; font-weight: 600; font-size: 16px; border: none; cursor: pointer;
+            box-shadow: 0 5px 20px rgba(46, 204, 113, 0.3); transition: 0.3s;
+            display: inline-flex; align-items: center; gap: 10px; width: 100%; justify-content: center;
+        }
+        .btn-checkout:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4); }
+
+        .empty-cart { text-align: center; padding: 60px 0; color: #95a5a6; }
+
+        .options-group h4 { margin: 0 0 15px 0; font-size: 16px; color: #2c3e50; font-weight: 700; }
+        .radio-option {
+            display: flex; align-items: center; gap: 10px; padding: 15px;
+            border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px;
+            cursor: pointer; transition: 0.2s; background: #fafafa;
+        }
+        .radio-option:hover { background: #f0f0f0; border-color: #ddd; }
+        .radio-option input[type="radio"] { accent-color: #d62828; transform: scale(1.2); }
+        .option-label { font-weight: 600; color: #555; display: flex; justify-content: space-between; width: 100%; }
+        .extra-cost { font-size: 12px; background: #e63946; color: white; padding: 2px 8px; border-radius: 10px; }
+        .highlight-text { font-size: 12px; color: #27ae60; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <?php include 'navbar.php'; ?>
+
+    <header class="cart-header">
+        <h1 style="margin:0; font-size: 36px; font-weight: 700;"><i class="fa-solid fa-cart-shopping"></i> Sepetim</h1>
+        <p style="opacity: 0.9; margin-top: 10px; font-size: 16px;">Siparişlerinizi güvenle tamamlayın.</p>
+    </header>
+
+    <div class="content-container">
+        <div class="cart-wrapper">
+            
+            <?php if (empty($sepetUrunleri)): ?>
+                
+                <div class="empty-cart">
+                    <i class="fa-solid fa-basket-shopping" style="font-size: 80px; margin-bottom: 25px; color: #eee;"></i>
+                    <h3 style="color:#555; font-size: 22px;">Sepetiniz henüz boş.</h3>
+                    <p style="margin-bottom: 30px;">İhtiyacınız olan ürünleri Sağlık Market'ten ekleyebilirsiniz.</p>
+                    <a href="ilac-market.php" class="btn-checkout" style="background: #3498db; box-shadow: 0 5px 20px rgba(52, 152, 219, 0.3); width: auto;">
+                        <i class="fa-solid fa-store"></i> Alışverişe Başla
+                    </a>
+                </div>
+
+            <?php else: ?>
+
+                <form method="POST">
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="45%">Ürün Bilgisi</th>
+                                <th width="15%" style="text-align:center;">Adet</th>
+                                <th width="15%" style="text-align:right;">Birim Fiyat</th>
+                                <th width="15%" style="text-align:right;">Toplam</th>
+                                <th width="10%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($sepetUrunleri as $urun): ?>
+                            <tr>
+                                <td>
+                                    <div class="product-info">
+                                        <img src="<?php echo htmlspecialchars($urun['ResimYolu'] ?: 'assets/img/logo.png'); ?>" class="product-img">
+                                        <div>
+                                            <div class="product-name"><?php echo htmlspecialchars($urun['IlacAdi']); ?></div>
+                                            <?php 
+                                                $renk = '#95a5a6'; $yazi = 'Normal';
+                                                if($urun['ReceteTuru'] == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
+                                                elseif($urun['ReceteTuru'] == 'Sari') { $renk = '#f1c40f'; $yazi = 'Sarı Reçete'; }
+                                                elseif($urun['ReceteTuru'] == 'Yesil') { $renk = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
+                                            ?>
+                                            <span style="font-size:11px; font-weight:700; color:white; background:<?php echo $renk; ?>; padding:2px 8px; border-radius:10px; display:inline-block;">
+                                                <?php echo $yazi; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align:center;">
+                                    <span class="qty-badge"><?php echo $urun['Adet']; ?></span>
+                                </td>
+                                <td style="text-align:right; color:#7f8c8d;">
+                                    <?php echo number_format($urun['BirimFiyat'], 2, ',', '.'); ?> ₺
+                                </td>
+                                <td style="text-align:right;" class="price-text">
+                                    <?php echo number_format($urun['AraToplam'], 2, ',', '.'); ?> ₺
+                                </td>
+                                <td style="text-align:right;">
+                                    <a href="sepet.php?sil=<?php echo $urun['IlacID']; ?>" class="btn-remove" title="Sepetten Kaldır">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
+                    <div class="cart-footer">
+                        <div>
+                            <div class="options-group" style="margin-bottom: 25px;">
+                                <h4><i class="fa-solid fa-truck-fast"></i> Teslimat Yöntemi</h4>
+                                
+                                <label class="radio-option">
+                                    <input type="radio" name="teslimat_turu" value="eczane" checked onchange="secenekleriGuncelle()">
+                                    <span class="option-label">
+                                        Eczaneden Gelip Alacağım
+                                        <span class="extra-cost" style="background:#2ecc71;">Ücretsiz</span>
+                                    </span>
+                                </label>
+                                
+                                <label class="radio-option">
+                                    <input type="radio" name="teslimat_turu" value="kurye" onchange="secenekleriGuncelle()">
+                                    <span class="option-label">
+                                        Adrese Kurye İle Gelsin
+                                        <span class="extra-cost">+50 TL</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="options-group">
+                                <h4><i class="fa-regular fa-credit-card"></i> Ödeme Yöntemi</h4>
+                                
+                                <label class="radio-option" id="opt-on-odeme">
+                                    <input type="radio" name="odeme_turu" value="on_odeme" checked>
+                                    <span class="option-label">
+                                        Online Ön Ödeme (Kredi Kartı)
+                                        <span class="highlight-text" id="on-odeme-not">Sıra Beklemeden Teslim</span>
+                                    </span>
+                                </label>
+
+                                <label class="radio-option" id="opt-kapida">
+                                    <input type="radio" name="odeme_turu" value="kapida">
+                                    <span class="option-label">
+                                        Kapıda / Eczanede Ödeme
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align:right; display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <a href="sepet.php?bosalt=1" style="color:#e74c3c; text-decoration:none; font-size:14px; display:inline-block; margin-bottom:15px;">
+                                    <i class="fa-regular fa-trash-can"></i> Sepeti Temizle
+                                </a>
+                                <br>
+                                <a href="ilac-market.php" style="color:#7f8c8d; text-decoration:none; font-size:14px;">
+                                    <i class="fa-solid fa-arrow-left"></i> Alışverişe Dön
+                                </a>
+                            </div>
+
+                            <div>
+                                <div style="font-size:14px; color:#95a5a6; margin-bottom:5px;">Ödenecek Toplam Tutar</div>
+                                <div class="total-price" id="toplamTutar" data-raw="<?php echo $toplamTutar; ?>">
+                                    <?php echo number_format($toplamTutar, 2, ',', '.'); ?> ₺
+                                </div>
+                                <div id="kuryeBilgisi" style="font-size:12px; color:#e74c3c; display:none; margin-top:5px;">+50 TL Kurye Ücreti Eklendi</div>
+                                <br>
+                                <button type="submit" name="siparis_onayla" class="btn-checkout">
+                                    Siparişi Onayla <i class="fa-solid fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
+            <?php endif; ?>
+
+        </div>
+    </div>
+
+    <script>
+        function secenekleriGuncelle() {
+            var teslimat = document.querySelector('input[name="teslimat_turu"]:checked').value;
+            var anaFiyat = parseFloat(document.getElementById('toplamTutar').getAttribute('data-raw'));
+            var kuryeUcreti = 50;
+
+            if (teslimat === 'kurye') {
+                anaFiyat += kuryeUcreti;
+                document.getElementById('kuryeBilgisi').style.display = 'block';
+            } else {
+                document.getElementById('kuryeBilgisi').style.display = 'none';
+            }
+            
+            var formatliFiyat = anaFiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+            document.getElementById('toplamTutar').innerText = formatliFiyat;
+
+            var onOdemeNot = document.getElementById('on-odeme-not');
+            if (teslimat === 'eczane') {
+                onOdemeNot.innerText = 'Sıra Beklemeden Teslim';
+                onOdemeNot.style.background = '#e8f5e9'; 
+                onOdemeNot.style.color = '#27ae60';
+            } else {
+                onOdemeNot.innerText = 'Kredi Kartı ile';
+                onOdemeNot.style.background = '#e3f2fd'; 
+                onOdemeNot.style.color = '#1e88e5';
+            }
+        }
+    </script>
+
+</body>
+</html>
