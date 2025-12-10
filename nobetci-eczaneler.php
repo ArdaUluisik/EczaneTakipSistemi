@@ -1,46 +1,50 @@
 <?php
 session_start();
-require 'db.php';
+require 'db.php'; 
 
-// Türkçe Tarih Formatı
+// Hataları gizle
+error_reporting(0);
 setlocale(LC_TIME, 'tr_TR.UTF-8', 'tr_TR', 'tr', 'turkish');
 $bugun = date('Y-m-d');
 
-// Filtreler
+// Filtre Değerlerini Al
 $sehirID = isset($_GET['sehir']) ? $_GET['sehir'] : '';
-$ilceID  = isset($_GET['ilce']) ? $_GET['ilce'] : '';
+$ilceID  = isset($_GET['ilce'])  ? $_GET['ilce']  : '';
+$aramaYapildi = isset($_GET['btn_ara']); // Butona basıldı mı?
 
-// --- SORGUNUN DÜZELTİLMİŞ HALİ ---
-// Hata Çözümü: Eczaneler tablosunda IlID olmadığı için, 
-// Önce Eczane -> İlçe (ilc) bağlantısını yapıyoruz.
-// Sonra İlçe -> İl (i) bağlantısını yapıyoruz.
+$eczaneler = [];
 
-$sql = "SELECT e.*, i.IlAdi, ilc.IlceAdi, nc.Aciklama as NobetNotu
-        FROM nobetcizelgesi nc
-        JOIN eczaneler e ON nc.EczaneID = e.EczaneID
-        JOIN ilceler ilc ON e.IlceID = ilc.IlceID  
-        JOIN iller i ON ilc.IlID = i.IlID          
-        WHERE nc.NobetTarihi = :bugun";
+// SADECE BUTONA BASILDIYSA SORGULA
+if ($aramaYapildi) {
+    $sql = "SELECT 
+                e.EczaneID, e.EczaneAdi, e.Adres, e.Telefon, e.Enlem, e.Boylam,
+                i.IlAdi, ilc.IlceAdi, 
+                nc.Aciklama as NobetNotu
+            FROM NobetCizelgesi nc
+            JOIN Eczaneler e ON nc.EczaneID = e.EczaneID
+            JOIN Ilceler ilc ON e.IlceID = ilc.IlceID  
+            JOIN Iller i ON ilc.IlID = i.IlID          
+            WHERE nc.NobetTarihi = :bugun";
 
-// Filtre varsa ekle (Burada da 'e.IlID' yerine 'i.IlID' kullanıyoruz)
-if ($sehirID != '') {
-    $sql .= " AND i.IlID = :sehir";
+    if ($sehirID != '') {
+        $sql .= " AND i.IlID = :sehir";
+    }
+    if ($ilceID != '') {
+        $sql .= " AND e.IlceID = :ilce";
+    }
+
+    $sql .= " ORDER BY e.EczaneAdi ASC";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':bugun', $bugun);
+        if ($sehirID != '') $stmt->bindValue(':sehir', $sehirID);
+        if ($ilceID != '')  $stmt->bindValue(':ilce', $ilceID);
+        
+        $stmt->execute();
+        $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) { }
 }
-if ($ilceID != '') {
-    $sql .= " AND e.IlceID = :ilce";
-}
-
-$sql .= " ORDER BY e.EczaneAdi ASC";
-
-$stmt = $pdo->prepare($sql);
-
-// Parametreleri bağla
-$stmt->bindParam(':bugun', $bugun);
-if ($sehirID != '') $stmt->bindParam(':sehir', $sehirID);
-if ($ilceID != '')  $stmt->bindParam(':ilce', $ilceID);
-
-$stmt->execute();
-$eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -55,25 +59,21 @@ $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="assets/css/index.css">
     
     <style>
-        /* Header Alanı */
+        /* SADECE BU SAYFAYA ÖZEL STİLLER (Navbar stili index.css'den geliyor) */
+        
         .duty-header {
             background: linear-gradient(135deg, #d62828 0%, #c0392b 100%);
-            color: white; padding: 50px 20px 80px;
-            text-align: center; border-radius: 0 0 50% 50% / 30px;
-            margin-bottom: 50px;
+            color: white; padding: 60px 20px 90px;
+            text-align: center; border-radius: 0 0 50% 50% / 30px; margin-bottom: 50px;
         }
         
-        /* Filtre Alanı */
         .filter-bar {
             background: white; padding: 10px 20px; border-radius: 50px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-width: 800px;
             margin: -80px auto 40px; display: flex; gap: 15px; position: relative; z-index: 10;
         }
 
-        .filter-select {
-            flex: 1; padding: 15px; border: none; font-size: 16px;
-            outline: none; cursor: pointer; background: transparent; color: #333;
-        }
+        .filter-select { flex: 1; padding: 15px; border: none; font-size: 16px; outline: none; cursor: pointer; background: transparent; color: #333; }
         
         .btn-filter {
             background: #2c3e50; color: white; border: none; padding: 12px 35px;
@@ -81,7 +81,6 @@ $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         .btn-filter:hover { background: #34495e; transform: scale(1.05); }
 
-        /* Kartlar */
         .pharmacy-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 30px; max-width: 1200px; margin: 0 auto 60px; padding: 0 20px;
@@ -92,37 +91,23 @@ $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
             box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 30px;
             transition: transform 0.3s ease, box-shadow 0.3s ease; position: relative;
         }
-
         .pharmacy-card:hover { transform: translateY(-7px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
 
-        /* Yanıp Sönen Işık */
         .status-pulse {
             position: absolute; top: 25px; right: 25px;
             background: #ffebee; color: #d62828; padding: 6px 12px;
             border-radius: 20px; font-size: 11px; font-weight: 700;
             display: flex; align-items: center; gap: 8px; border: 1px solid #ffcdd2;
         }
-        .pulse-dot {
-            width: 8px; height: 8px; background: #d62828; border-radius: 50%;
-            animation: pulse 1.5s infinite;
-        }
+        .pulse-dot { width: 8px; height: 8px; background: #d62828; border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
 
         .pharmacy-name { font-size: 1.4rem; color: #2c3e50; margin-bottom: 5px; font-weight: 700; }
         .pharmacy-location { color: #7f8c8d; font-size: 0.95rem; margin-bottom: 15px; }
-        
         .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
-        
-        .btn-call {
-            flex: 1; background: #eef2ff; color: #4361ee; text-decoration: none;
-            padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; transition: 0.2s;
-        }
+        .btn-call { flex: 1; background: #eef2ff; color: #4361ee; text-decoration: none; padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; transition: 0.2s; }
         .btn-call:hover { background: #4361ee; color: white; }
-
-        .btn-map {
-            flex: 1; background: #dcfce7; color: #166534; text-decoration: none;
-            padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; transition: 0.2s;
-        }
+        .btn-map { flex: 1; background: #dcfce7; color: #166534; text-decoration: none; padding: 12px; border-radius: 12px; text-align: center; font-weight: 600; transition: 0.2s; }
         .btn-map:hover { background: #166534; color: white; }
     </style>
 </head>
@@ -144,8 +129,7 @@ $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <select name="sehir" class="filter-select" onchange="this.form.submit()">
             <option value="">Şehir Seçiniz</option>
             <?php
-            // Şehirleri çek
-            $iller = $pdo->query("SELECT * FROM iller ORDER BY IlAdi ASC")->fetchAll();
+            $iller = $pdo->query("SELECT * FROM Iller ORDER BY IlAdi ASC")->fetchAll();
             foreach ($iller as $il) {
                 $selected = ($il['IlID'] == $sehirID) ? 'selected' : '';
                 echo "<option value='".$il['IlID']."' $selected>".$il['IlAdi']."</option>";
@@ -156,33 +140,42 @@ $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <select name="ilce" class="filter-select">
             <option value="">İlçe Seçiniz</option>
             <?php
-            // Seçilen şehrin ilçelerini çek
             if ($sehirID) {
-                $ilceler = $pdo->prepare("SELECT * FROM ilceler WHERE IlID = ? ORDER BY IlceAdi ASC");
-                $ilceler->execute([$sehirID]);
-                foreach ($ilceler->fetchAll() as $ilce) {
+                $stmt = $pdo->prepare("SELECT * FROM Ilceler WHERE IlID = :id ORDER BY IlceAdi ASC");
+                $stmt->execute(['id' => $sehirID]);
+                $ilceler = $stmt->fetchAll();
+                foreach ($ilceler as $ilce) {
                     $selected = ($ilce['IlceID'] == $ilceID) ? 'selected' : '';
                     echo "<option value='".$ilce['IlceID']."' $selected>".$ilce['IlceAdi']."</option>";
                 }
+            } else {
+                echo "<option disabled>Önce Şehir Seçiniz</option>";
             }
             ?>
         </select>
 
-        <button type="submit" class="btn-filter">
+        <button type="submit" name="btn_ara" class="btn-filter">
             <i class="fa-solid fa-search"></i> Bul
         </button>
     </form>
 
     <section class="pharmacy-grid">
         
-        <?php if (empty($eczaneler)): ?>
+        <?php if (!$aramaYapildi): ?>
+            <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">
+                <i class="fa-solid fa-magnifying-glass-location" style="font-size: 60px; margin-bottom: 20px; color: #e0e0e0;"></i>
+                <h3 style="color:#666;">Lütfen Nöbetçi Eczane Araması Yapınız</h3>
+                <p>Şehir ve ilçe seçtikten sonra "Bul" butonuna basınız.</p>
+            </div>
+
+        <?php elseif (empty($eczaneler)): ?>
             <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">
                 <i class="fa-solid fa-hospital-user" style="font-size: 60px; margin-bottom: 20px; color: #ddd;"></i>
                 <h3 style="color:#555;">Kayıtlı nöbetçi eczane bulunamadı.</h3>
-                <p>Bugün için bu bölgede nöbetçi girişi yapılmamış olabilir.</p>
+                <p>Bu bölgede bugün için sisteme girilmiş nöbetçi eczane yok.</p>
             </div>
+
         <?php else: ?>
-            
             <?php foreach ($eczaneler as $eczane): ?>
                 <div class="pharmacy-card">
                     <div class="status-pulse">
@@ -210,14 +203,12 @@ $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <a href="tel:<?php echo $eczane['Telefon']; ?>" class="btn-call">
                             <i class="fa-solid fa-phone"></i> Hemen Ara
                         </a>
-                        
                         <a href="https://www.google.com/maps/search/?api=1&query=<?php echo urlencode($eczane['EczaneAdi'] . ' ' . $eczane['IlceAdi']); ?>" target="_blank" class="btn-map">
                             <i class="fa-solid fa-location-arrow"></i> Yol Tarifi
                         </a>
                     </div>
                 </div>
             <?php endforeach; ?>
-
         <?php endif; ?>
 
     </section>

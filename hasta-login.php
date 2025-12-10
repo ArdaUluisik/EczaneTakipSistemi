@@ -1,6 +1,13 @@
 <?php
 // DOSYA ADI: hasta-login.php
 session_start();
+
+// GÜVENLİK: Eğer zaten giriş yapılmışsa, direkt ana sayfaya at
+if (isset($_SESSION['hasta_id'])) {
+    header("Location: index.php");
+    exit;
+}
+
 require 'db.php'; // Veritabanı bağlantısı
 
 $hataMesaji = "";
@@ -9,8 +16,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $tc = $_POST['tcno'];
     $sifre = $_POST['sifre'];
 
-    // GÜNCELLEME: Stored Procedure yerine standart sorgu kullanıyoruz.
-    // Çünkü 'hastalar' tablosunu oluşturduk ama prosedür oluşturmadık.
+    // SQL Sorgusu: TC ve Şifre eşleşiyor mu?
+    // Not: Şifreler hash'li değil, düz metin (Okul projesi standardı)
     $sql = "SELECT * FROM hastalar WHERE TCNo = :tc AND Sifre = :sifre";
     
     try {
