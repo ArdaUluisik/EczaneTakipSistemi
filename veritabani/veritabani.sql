@@ -1,13 +1,13 @@
--- MySQL dump 10.13  Distrib 8.0.44, for Win64 (x86_64)
+-- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
 --
--- Host: 127.0.0.1    Database: eczanedb
+-- Host: 127.0.0.1    Database: EczaneDB
 -- ------------------------------------------------------
--- Server version	8.0.44
+-- Server version	10.4.32-MariaDB
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -21,19 +21,19 @@
 
 DROP TABLE IF EXISTS `eczaneler`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `eczaneler` (
-  `EczaneID` int NOT NULL AUTO_INCREMENT,
-  `EczaneAdi` varchar(100) COLLATE utf8mb4_turkish_ci NOT NULL,
-  `IlceID` int NOT NULL,
-  `Adres` text COLLATE utf8mb4_turkish_ci,
-  `Telefon` varchar(20) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
+  `EczaneID` int(11) NOT NULL AUTO_INCREMENT,
+  `EczaneAdi` varchar(100) NOT NULL,
+  `IlceID` int(11) NOT NULL,
+  `Adres` text DEFAULT NULL,
+  `Telefon` varchar(20) DEFAULT NULL,
   `Enlem` decimal(10,8) DEFAULT NULL,
   `Boylam` decimal(11,8) DEFAULT NULL,
   PRIMARY KEY (`EczaneID`),
   KEY `IlceID` (`IlceID`),
   CONSTRAINT `eczaneler_ibfk_1` FOREIGN KEY (`IlceID`) REFERENCES `ilceler` (`IlceID`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `eczaneler` (
 
 LOCK TABLES `eczaneler` WRITE;
 /*!40000 ALTER TABLE `eczaneler` DISABLE KEYS */;
-INSERT INTO `eczaneler` VALUES (1,'Kadıköy Eczanesi',1,'Moda Caddesi No:10 Kadıköy','0216 111 22 33',NULL,NULL),(2,'Beşiktaş Eczanesi',2,'Çarşı İçi Beşiktaş','0212 222 33 44',NULL,NULL),(3,'Çankaya Eczanesi',3,'Kızılay Meydanı Ankara','0312 123 45 67',NULL,NULL);
+INSERT INTO `eczaneler` VALUES (1,'Hayat Eczanesi',1,'Moda Caddesi No:10 Kadıköy','0216 111 22 33',NULL,NULL),(2,'Şifa Eczanesi',1,'Bahariye Cd. No:5 Kadıköy','0216 444 55 66',NULL,NULL),(3,'Merkez Eczane',2,'Çarşı İçi Beşiktaş','0212 222 33 44',NULL,NULL),(4,'Güneş Eczanesi',3,'Kızılay Meydanı Ankara','0312 123 45 67',NULL,NULL);
 /*!40000 ALTER TABLE `eczaneler` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -52,19 +52,19 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `eczanestok`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `eczanestok` (
-  `StokID` int NOT NULL AUTO_INCREMENT,
-  `EczaneID` int NOT NULL,
-  `IlacID` int NOT NULL,
-  `Adet` int DEFAULT '0',
+  `StokID` int(11) NOT NULL AUTO_INCREMENT,
+  `EczaneID` int(11) NOT NULL,
+  `IlacID` int(11) NOT NULL,
+  `Adet` int(11) DEFAULT 0,
   `Fiyat` decimal(10,2) DEFAULT NULL,
   PRIMARY KEY (`StokID`),
   KEY `EczaneID` (`EczaneID`),
   KEY `IlacID` (`IlacID`),
   CONSTRAINT `eczanestok_ibfk_1` FOREIGN KEY (`EczaneID`) REFERENCES `eczaneler` (`EczaneID`) ON DELETE CASCADE,
   CONSTRAINT `eczanestok_ibfk_2` FOREIGN KEY (`IlacID`) REFERENCES `ilaclar` (`IlacID`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -73,7 +73,7 @@ CREATE TABLE `eczanestok` (
 
 LOCK TABLES `eczanestok` WRITE;
 /*!40000 ALTER TABLE `eczanestok` DISABLE KEYS */;
-INSERT INTO `eczanestok` VALUES (1,1,1,24,100.00);
+INSERT INTO `eczanestok` VALUES (1,1,1,50,45.50),(2,1,2,100,25.00),(3,2,3,20,85.00),(4,3,1,10,50.00);
 /*!40000 ALTER TABLE `eczanestok` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -83,14 +83,14 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `hastalar`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hastalar` (
-  `HastaID` int NOT NULL AUTO_INCREMENT,
-  `TCNo` varchar(11) COLLATE utf8mb4_turkish_ci NOT NULL,
-  `Sifre` varchar(255) COLLATE utf8mb4_turkish_ci NOT NULL,
-  `AdSoyad` varchar(100) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
-  `Telefon` varchar(20) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
-  `Adres` text COLLATE utf8mb4_turkish_ci,
+  `HastaID` int(11) NOT NULL AUTO_INCREMENT,
+  `TCNo` varchar(11) NOT NULL,
+  `Sifre` varchar(255) NOT NULL,
+  `AdSoyad` varchar(100) DEFAULT NULL,
+  `Telefon` varchar(20) DEFAULT NULL,
+  `Adres` text DEFAULT NULL,
   PRIMARY KEY (`HastaID`),
   UNIQUE KEY `TCNo` (`TCNo`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
@@ -102,7 +102,7 @@ CREATE TABLE `hastalar` (
 
 LOCK TABLES `hastalar` WRITE;
 /*!40000 ALTER TABLE `hastalar` DISABLE KEYS */;
-INSERT INTO `hastalar` VALUES (1,'14275166798','1234','Arda Uluışık','5066898325','Mamak');
+INSERT INTO `hastalar` VALUES (1,'33333333333','1234','Mehmet Hasta','0555 111 22 33',NULL);
 /*!40000 ALTER TABLE `hastalar` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -112,17 +112,16 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `ilaclar`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ilaclar` (
-  `IlacID` int NOT NULL AUTO_INCREMENT,
-  `IlacAdi` varchar(100) COLLATE utf8mb4_turkish_ci NOT NULL,
-  `Barkod` varchar(50) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
-  `Aciklama` text COLLATE utf8mb4_turkish_ci,
-  `ResimYolu` varchar(255) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
-  `ReceteTuru` enum('Normal','Kirmizi','Sari','Yesil') COLLATE utf8mb4_turkish_ci DEFAULT 'Normal',
+  `IlacID` int(11) NOT NULL AUTO_INCREMENT,
+  `IlacAdi` varchar(100) NOT NULL,
+  `Barkod` varchar(50) DEFAULT NULL,
+  `Aciklama` text DEFAULT NULL,
+  `ResimYolu` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`IlacID`),
   UNIQUE KEY `Barkod` (`Barkod`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -131,7 +130,7 @@ CREATE TABLE `ilaclar` (
 
 LOCK TABLES `ilaclar` WRITE;
 /*!40000 ALTER TABLE `ilaclar` DISABLE KEYS */;
-INSERT INTO `ilaclar` VALUES (1,'Aspirin','86939367','Açıklama girilmedi',NULL,'Yesil');
+INSERT INTO `ilaclar` VALUES (1,'Aspirin','8690001','Ağrı kesici',NULL),(2,'Parol','8690002','Ateş düşürücü',NULL),(3,'Majezik','8690003','Diş ağrısı',NULL),(4,'Augmentin','8690004','Antibiyotik',NULL);
 /*!40000 ALTER TABLE `ilaclar` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -141,11 +140,11 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `ilceler`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ilceler` (
-  `IlceID` int NOT NULL AUTO_INCREMENT,
-  `IlID` int NOT NULL,
-  `IlceAdi` varchar(50) COLLATE utf8mb4_turkish_ci NOT NULL,
+  `IlceID` int(11) NOT NULL AUTO_INCREMENT,
+  `IlID` int(11) NOT NULL,
+  `IlceAdi` varchar(50) NOT NULL,
   PRIMARY KEY (`IlceID`),
   KEY `IlID` (`IlID`),
   CONSTRAINT `ilceler_ibfk_1` FOREIGN KEY (`IlID`) REFERENCES `iller` (`IlID`)
@@ -158,7 +157,7 @@ CREATE TABLE `ilceler` (
 
 LOCK TABLES `ilceler` WRITE;
 /*!40000 ALTER TABLE `ilceler` DISABLE KEYS */;
-INSERT INTO `ilceler` VALUES (1,34,'Kadıköy'),(2,34,'Beşiktaş'),(3,6,'Çankaya');
+INSERT INTO `ilceler` VALUES (1,6,'Çankaya'),(2,6,'Mamak'),(3,6,'Keçiören');
 /*!40000 ALTER TABLE `ilceler` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -168,10 +167,10 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `iller`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `iller` (
-  `IlID` int NOT NULL AUTO_INCREMENT,
-  `IlAdi` varchar(50) COLLATE utf8mb4_turkish_ci NOT NULL,
+  `IlID` int(11) NOT NULL AUTO_INCREMENT,
+  `IlAdi` varchar(50) NOT NULL,
   PRIMARY KEY (`IlID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -192,16 +191,16 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `nobetcizelgesi`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `nobetcizelgesi` (
-  `NobetID` int NOT NULL AUTO_INCREMENT,
-  `EczaneID` int NOT NULL,
+  `NobetID` int(11) NOT NULL AUTO_INCREMENT,
+  `EczaneID` int(11) NOT NULL,
   `NobetTarihi` date NOT NULL,
-  `Aciklama` varchar(255) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
+  `Aciklama` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`NobetID`),
   KEY `EczaneID` (`EczaneID`),
   CONSTRAINT `nobetcizelgesi_ibfk_1` FOREIGN KEY (`EczaneID`) REFERENCES `eczaneler` (`EczaneID`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -210,7 +209,7 @@ CREATE TABLE `nobetcizelgesi` (
 
 LOCK TABLES `nobetcizelgesi` WRITE;
 /*!40000 ALTER TABLE `nobetcizelgesi` DISABLE KEYS */;
-INSERT INTO `nobetcizelgesi` VALUES (1,1,'2025-12-11','Sabaha kadar açık'),(2,1,'2025-12-11','Sabah 08:00\'e kadar açık'),(3,2,'2025-12-11','24 Saat Açık');
+INSERT INTO `nobetcizelgesi` VALUES (1,1,'2025-12-05','Sabaha kadar açık');
 /*!40000 ALTER TABLE `nobetcizelgesi` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -220,14 +219,14 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `personel`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `personel` (
-  `PersonelID` int NOT NULL AUTO_INCREMENT,
-  `EczaneID` int DEFAULT NULL,
-  `TCNo` varchar(11) COLLATE utf8mb4_turkish_ci NOT NULL,
-  `Sifre` varchar(255) COLLATE utf8mb4_turkish_ci NOT NULL,
-  `AdSoyad` varchar(100) COLLATE utf8mb4_turkish_ci DEFAULT NULL,
-  `Rol` varchar(20) COLLATE utf8mb4_turkish_ci DEFAULT 'Eczaci',
+  `PersonelID` int(11) NOT NULL AUTO_INCREMENT,
+  `EczaneID` int(11) DEFAULT NULL,
+  `TCNo` varchar(11) NOT NULL,
+  `Sifre` varchar(255) NOT NULL,
+  `AdSoyad` varchar(100) DEFAULT NULL,
+  `Rol` varchar(20) DEFAULT 'Eczaci',
   PRIMARY KEY (`PersonelID`),
   UNIQUE KEY `TCNo` (`TCNo`),
   KEY `EczaneID` (`EczaneID`),
@@ -246,51 +245,18 @@ INSERT INTO `personel` VALUES (1,1,'11111111111','1234','Ahmet Yılmaz','Eczaci'
 UNLOCK TABLES;
 
 --
--- Table structure for table `sepet`
---
-
-DROP TABLE IF EXISTS `sepet`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `sepet` (
-  `SepetID` int NOT NULL AUTO_INCREMENT,
-  `HastaID` int NOT NULL,
-  `IlacID` int NOT NULL,
-  `EczaneID` int NOT NULL,
-  `Adet` int DEFAULT '1',
-  `EklenmeTarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`SepetID`),
-  KEY `HastaID` (`HastaID`),
-  KEY `IlacID` (`IlacID`),
-  KEY `EczaneID` (`EczaneID`),
-  CONSTRAINT `sepet_ibfk_1` FOREIGN KEY (`HastaID`) REFERENCES `hastalar` (`HastaID`),
-  CONSTRAINT `sepet_ibfk_2` FOREIGN KEY (`IlacID`) REFERENCES `ilaclar` (`IlacID`),
-  CONSTRAINT `sepet_ibfk_3` FOREIGN KEY (`EczaneID`) REFERENCES `eczaneler` (`EczaneID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `sepet`
---
-
-LOCK TABLES `sepet` WRITE;
-/*!40000 ALTER TABLE `sepet` DISABLE KEYS */;
-/*!40000 ALTER TABLE `sepet` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `siparisdetay`
 --
 
 DROP TABLE IF EXISTS `siparisdetay`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `siparisdetay` (
-  `DetayID` int NOT NULL AUTO_INCREMENT,
-  `SiparisID` int NOT NULL,
-  `IlacID` int NOT NULL,
-  `EczaneID` int NOT NULL,
-  `Adet` int NOT NULL,
+  `DetayID` int(11) NOT NULL AUTO_INCREMENT,
+  `SiparisID` int(11) NOT NULL,
+  `IlacID` int(11) NOT NULL,
+  `EczaneID` int(11) NOT NULL,
+  `Adet` int(11) NOT NULL,
   `BirimFiyat` decimal(10,2) DEFAULT NULL,
   PRIMARY KEY (`DetayID`),
   KEY `SiparisID` (`SiparisID`),
@@ -299,7 +265,7 @@ CREATE TABLE `siparisdetay` (
   CONSTRAINT `siparisdetay_ibfk_1` FOREIGN KEY (`SiparisID`) REFERENCES `siparisler` (`SiparisID`),
   CONSTRAINT `siparisdetay_ibfk_2` FOREIGN KEY (`IlacID`) REFERENCES `ilaclar` (`IlacID`),
   CONSTRAINT `siparisdetay_ibfk_3` FOREIGN KEY (`EczaneID`) REFERENCES `eczaneler` (`EczaneID`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -308,7 +274,6 @@ CREATE TABLE `siparisdetay` (
 
 LOCK TABLES `siparisdetay` WRITE;
 /*!40000 ALTER TABLE `siparisdetay` DISABLE KEYS */;
-INSERT INTO `siparisdetay` VALUES (1,1,1,1,1,100.00);
 /*!40000 ALTER TABLE `siparisdetay` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -318,17 +283,17 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `siparisler`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `siparisler` (
-  `SiparisID` int NOT NULL AUTO_INCREMENT,
-  `HastaID` int NOT NULL,
-  `SiparisTarihi` datetime DEFAULT CURRENT_TIMESTAMP,
+  `SiparisID` int(11) NOT NULL AUTO_INCREMENT,
+  `HastaID` int(11) NOT NULL,
+  `SiparisTarihi` datetime DEFAULT current_timestamp(),
   `ToplamTutar` decimal(10,2) DEFAULT NULL,
-  `Durum` varchar(20) COLLATE utf8mb4_turkish_ci DEFAULT 'Bekleniyor',
+  `Durum` varchar(20) DEFAULT 'Bekleniyor',
   PRIMARY KEY (`SiparisID`),
   KEY `HastaID` (`HastaID`),
   CONSTRAINT `siparisler_ibfk_1` FOREIGN KEY (`HastaID`) REFERENCES `hastalar` (`HastaID`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_turkish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -337,9 +302,103 @@ CREATE TABLE `siparisler` (
 
 LOCK TABLES `siparisler` WRITE;
 /*!40000 ALTER TABLE `siparisler` DISABLE KEYS */;
-INSERT INTO `siparisler` VALUES (1,1,'2025-12-11 12:19:57',100.00,'Bekleniyor');
 /*!40000 ALTER TABLE `siparisler` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Dumping events for database 'EczaneDB'
+--
+
+--
+-- Dumping routines for database 'EczaneDB'
+--
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `sp_HastaGiris` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_HastaGiris`(IN p_TCNo VARCHAR(11), IN p_Sifre VARCHAR(255))
+BEGIN
+    SELECT HastaID, AdSoyad, Telefon 
+    FROM Hastalar WHERE TCNo = p_TCNo AND Sifre = p_Sifre;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `sp_IlacBul` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_IlacBul`(IN p_IlacAdi VARCHAR(100), IN p_IlceID INT)
+BEGIN
+    SELECT E.EczaneAdi, E.Adres, E.Telefon, S.Adet, S.Fiyat
+    FROM EczaneStok S
+    JOIN Ilaclar I ON S.IlacID = I.IlacID
+    JOIN Eczaneler E ON S.EczaneID = E.EczaneID
+    WHERE I.IlacAdi LIKE CONCAT('%', p_IlacAdi, '%') 
+      AND E.IlceID = p_IlceID
+      AND S.Adet > 0;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `sp_NobetciGetir` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_NobetciGetir`()
+BEGIN
+    SELECT E.EczaneAdi, E.Adres, E.Telefon, N.Aciklama
+    FROM NobetCizelgesi N
+    JOIN Eczaneler E ON N.EczaneID = E.EczaneID
+    WHERE N.NobetTarihi = CURDATE();
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `sp_PersonelGiris` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_PersonelGiris`(IN p_TCNo VARCHAR(11), IN p_Sifre VARCHAR(255))
+BEGIN
+    SELECT PersonelID, AdSoyad, Rol, EczaneID 
+    FROM Personel WHERE TCNo = p_TCNo AND Sifre = p_Sifre;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -350,4 +409,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-11 12:32:44
+-- Dump completed on 2025-12-11 12:59:51
