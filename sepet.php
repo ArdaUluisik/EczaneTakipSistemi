@@ -19,7 +19,7 @@ if (isset($_GET['bosalt'])) {
     exit;
 }
 
-// --- SİPARİŞİ TAMAMLAMA VE STOKTAN DÜŞME İŞLEMİ ---
+// --- SİPARİŞİ TAMAMLAMA, KAYDETME VE STOKTAN DÜŞME İŞLEMİ ---
 if (isset($_POST['siparis_onayla'])) {
 
     // 1. GÜVENLİK: Giriş kontrolü
@@ -28,51 +28,78 @@ if (isset($_POST['siparis_onayla'])) {
         exit;
     }
     
-    $teslimat = $_POST['teslimat_turu'];
+    $hastaID = $_SESSION['hasta_id'];
+    $teslimat = $_POST['teslimat_turu']; // kurye veya eczane
     $odeme    = $_POST['odeme_turu'];
     
-    // 2. STOK GÜNCELLEME OPERASYONU
+    // Kurye ücreti kontrolü
+    $ekstraUcret = ($teslimat == 'kurye') ? 50 : 0;
+    
+    // 2. VERİTABANI İŞLEMLERİ (Transaction)
     try {
-        $pdo->beginTransaction(); // İşlemi başlat (Hata olursa geri alırız)
+        $pdo->beginTransaction(); // İşlemi başlat
+
+        // A. Önce Siparişin "Başlığını" Oluştur (Toplam tutarı sonra güncelleyeceğiz)
+        $siparisEkle = $pdo->prepare("INSERT INTO Siparisler (HastaID, ToplamTutar, Durum) VALUES (?, 0, 'Bekleniyor')");
+        $siparisEkle->execute([$hastaID]);
+        $yeniSiparisID = $pdo->lastInsertId(); // Oluşan Sipariş ID'sini al
+
+        $gercekToplamTutar = 0;
 
         foreach ($_SESSION['sepet'] as $ilacID => $adet) {
             
-            // A. Hangi eczaneden düşeceğiz? (En ucuz fiyatı verenden düşelim - Mantık gereği)
-            // Bu sorgu, o ilaca sahip ve stoğu yeten en ucuz eczaneyi bulur.
-            $stokBul = $pdo->prepare("SELECT StokID FROM eczanestok WHERE IlacID = ? AND Adet >= ? ORDER BY Fiyat ASC LIMIT 1");
+            // B. En uygun fiyatlı ve stoğu olan eczaneyi bul
+            // SQL Şemana göre: EczaneStok tablosunda EczaneID, IlacID, Fiyat ve Adet var.
+            $stokBul = $pdo->prepare("SELECT StokID, EczaneID, Fiyat FROM EczaneStok WHERE IlacID = ? AND Adet >= ? ORDER BY Fiyat ASC LIMIT 1");
             $stokBul->execute([$ilacID, $adet]);
             $stokKaydi = $stokBul->fetch(PDO::FETCH_ASSOC);
 
             if ($stokKaydi) {
-                // B. Stoğu Düş (UPDATE)
-                $stokGuncelle = $pdo->prepare("UPDATE eczanestok SET Adet = Adet - ? WHERE StokID = ?");
-                $stokGuncelle->execute([$adet, $stokKaydi['StokID']]);
+                $eczaneID = $stokKaydi['EczaneID'];
+                $birimFiyat = $stokKaydi['Fiyat'];
+                $stokID = $stokKaydi['StokID'];
+                
+                // C. Stoğu Düş (UPDATE)
+                $stokGuncelle = $pdo->prepare("UPDATE EczaneStok SET Adet = Adet - ? WHERE StokID = ?");
+                $stokGuncelle->execute([$adet, $stokID]);
+
+                // D. Sipariş Detayını Kaydet (INSERT) -> SQL Şemana uygun: SiparisDetay
+                $detayEkle = $pdo->prepare("INSERT INTO SiparisDetay (SiparisID, IlacID, EczaneID, Adet, BirimFiyat) VALUES (?, ?, ?, ?, ?)");
+                $detayEkle->execute([$yeniSiparisID, $ilacID, $eczaneID, $adet, $birimFiyat]);
+
+                // Toplam tutarı hesapla
+                $gercekToplamTutar += ($birimFiyat * $adet);
+
             } else {
-                // Eğer stok yetersizse hata fırlat
-                throw new Exception("Bazı ilaçlar için yeterli stok bulunamadı. ID: " . $ilacID);
+                // Eğer stok yetersizse hata fırlat ve her şeyi geri al
+                throw new Exception("Sepetinizdeki bazı ilaçlar (ID: $ilacID) için yeterli stok bulunamadı.");
             }
         }
 
-        $pdo->commit(); // Her şey yolundaysa işlemi onayla
+        // E. Siparişin Son Toplam Tutarını Güncelle (Kurye ücreti dahil)
+        $sonTutar = $gercekToplamTutar + $ekstraUcret;
+        $tutarGuncelle = $pdo->prepare("UPDATE Siparisler SET ToplamTutar = ? WHERE SiparisID = ?");
+        $tutarGuncelle->execute([$sonTutar, $yeniSiparisID]);
+
+        $pdo->commit(); // Hata yoksa veritabanına işle
         
         // 3. SEPETİ TEMİZLE VE MESAJ VER
         unset($_SESSION['sepet']);
         
-        $mesaj = "Siparişiniz Başarıyla Alındı! Stoklar güncellendi.";
-        if ($teslimat == 'kurye') $mesaj .= "\\nKurye yola çıkacak.";
-        else $mesaj .= "\\nEczaneden teslim alabilirsiniz.";
-
+        $mesaj = "Siparişiniz Alındı! Sipariş Numaranız: " . $yeniSiparisID;
+        if ($teslimat == 'kurye') $mesaj .= "\\nKurye en kısa sürede yola çıkacak.";
+        
         echo "<script>alert('$mesaj'); window.location.href='index.php';</script>";
         exit;
 
     } catch (Exception $e) {
-        $pdo->rollBack(); // Hata varsa hiçbir şeyi değiştirme
-        echo "<script>alert('Hata oluştu: " . $e->getMessage() . "'); window.location.href='sepet.php';</script>";
+        $pdo->rollBack(); // Hata varsa yapılan tüm işlemleri iptal et
+        echo "<script>alert('Sipariş oluşturulurken hata: " . $e->getMessage() . "'); window.location.href='sepet.php';</script>";
         exit;
     }
 }
 
-// Sepet Verilerini Çekme (Değişmedi)
+// Sepet Listeleme Kısmı (Görünüm - Burası aynı kalabilir, sadece tablo isimlerine dikkat)
 $sepetUrunleri = [];
 $toplamTutar = 0;
 
@@ -80,10 +107,11 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
     $ids = array_keys($_SESSION['sepet']);
     $idListesi = implode(',', $ids);
 
+    // SQL Şemana uygun: Ilaclar ve EczaneStok tablosu
     $sql = "SELECT i.IlacID, i.IlacAdi, i.ResimYolu, i.ReceteTuru, MIN(es.Fiyat) as BirimFiyat 
-            FROM ilaclar i 
-            JOIN eczanestok es ON i.IlacID = es.IlacID 
-            WHERE i.IlacID IN ($idListesi) 
+            FROM Ilaclar i 
+            JOIN EczaneStok es ON i.IlacID = es.IlacID 
+            WHERE i.IlacID IN ($idListesi) AND es.Adet > 0
             GROUP BY i.IlacID";
             
     $stmt = $pdo->query($sql);
@@ -108,7 +136,6 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
     <title>e-Ecza | Sepetim</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="assets/css/main.css">
     
     <style>
