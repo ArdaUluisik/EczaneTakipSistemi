@@ -41,7 +41,7 @@ if (isset($_SESSION['sepet'])) {
 
             <?php if (!isset($_SESSION['personel_id'])): ?>
                 <a href="ilac-market.php" class="nav-link" 
-                   style="<?php echo ($aktif_sayfa == 'saglik-market.php') ? 'color: #e63946; font-weight:700;' : ''; ?>">
+                   style="<?php echo ($aktif_sayfa == 'ilac-market.php') ? 'color: #e63946; font-weight:700;' : ''; ?>">
                     <i class="fa-solid fa-store"></i> Sağlık Market
                 </a>
 
@@ -57,6 +57,10 @@ if (isset($_SESSION['sepet'])) {
 
             <?php if (isset($_SESSION['hasta_id'])): ?>
                 
+                <a href="siparislerim.php" class="nav-link" 
+                   style="<?php echo ($aktif_sayfa == 'siparislerim.php') ? 'color: #e63946; font-weight:700;' : 'color: #2a9d8f; font-weight: 600;'; ?>">
+                    <i class="fa-solid fa-box-open"></i> Siparişlerim
+                </a>
                 <a href="hesap-ayarlari.php" class="nav-link" 
                    style="<?php echo ($aktif_sayfa == 'hesap-ayarlari.php') ? 'color: #e63946; font-weight:700;' : 'color: #2a9d8f; font-weight: 600;'; ?>">
                     <i class="fa-solid fa-user-circle"></i> 
@@ -67,21 +71,24 @@ if (isset($_SESSION['sepet'])) {
                     <i class="fa-solid fa-right-from-bracket"></i> Çıkış
                 </a>
 
-            <?php elseif (isset($_SESSION['personel_id'])): ?>
+           <?php elseif (isset($_SESSION['personel_id'])): ?>
 
                 <a href="eczane-panel.php" class="nav-link" 
                    style="<?php echo ($aktif_sayfa == 'eczane-panel.php') ? 'color: #e63946; font-weight:700;' : 'color: #e63946; font-weight: 600;'; ?>">
-                    <i class="fa-solid fa-store"></i> Yönetim Paneli
+                    <i class="fa-solid fa-chart-pie"></i> Yönetim Paneli
                 </a>
 
+                <a href="personel-siparisler.php" class="nav-link" 
+                   style="<?php echo ($aktif_sayfa == 'personel-siparisler.php') ? 'color: #e63946; font-weight:700;' : 'color: #2a9d8f; font-weight: 600;'; ?>">
+                    <i class="fa-solid fa-bell"></i> Gelen Siparişler
+                </a>
                 <div class="nav-link" style="color: #333; font-size: 14px; cursor: default;">
-                    <i class="fa-solid fa-user-doctor"></i> <?php echo htmlspecialchars($_SESSION['personel_adi']); ?>
+                    <i class="fa-solid fa-user-doctor"></i> <?php echo htmlspecialchars($_SESSION['personel_adi'] ?? 'Personel'); ?>
                 </div>
 
                 <a href="logout.php" class="nav-link" style="color: #7f8c8d;">
                     <i class="fa-solid fa-power-off"></i> Çıkış
                 </a>
-
             <?php else: ?>
 
                 <a href="hasta-kayit.php" class="nav-link" 
