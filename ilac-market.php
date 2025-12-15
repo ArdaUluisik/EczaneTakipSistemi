@@ -5,7 +5,7 @@ session_start();
 require_once 'classes/Database.php';
 require_once 'classes/Market.php';
 
-// GÜVENLİK: Personel giremez
+// GÜVENLİK
 if (isset($_SESSION['personel_id'])) {
     header("Location: eczane-panel.php");
     exit;
@@ -15,32 +15,26 @@ if (isset($_SESSION['personel_id'])) {
 $db = Database::getInstance()->getConnection();
 $market = new Market($db);
 
-// SEPET SAYISINI HESAPLA (Navbar için)
+// --- AJAX İŞLEMİ ---
+if (isset($_POST['ajax_sepete_ekle'])) {
+    $eklenecekID = $_POST['ilac_id'];
+    
+    if (!isset($_SESSION['sepet'])) { $_SESSION['sepet'] = []; }
+
+    if (isset($_SESSION['sepet'][$eklenecekID])) { $_SESSION['sepet'][$eklenecekID]++; } 
+    else { $_SESSION['sepet'][$eklenecekID] = 1; }
+    
+    $yeniSayi = array_sum($_SESSION['sepet']);
+    echo json_encode(['status' => 'success', 'count' => $yeniSayi]);
+    exit;
+}
+
+// --- STANDART PHP ---
 $sepetSayisi = 0;
 if (isset($_SESSION['sepet'])) {
     $sepetSayisi = array_sum($_SESSION['sepet']);
 }
 
-// --- SEPETE EKLEME MANTIĞI ---
-if (isset($_POST['sepete_ekle'])) {
-    $eklenecekID = $_POST['ilac_id'];
-    
-    if (!isset($_SESSION['sepet'])) {
-        $_SESSION['sepet'] = [];
-    }
-
-    if (isset($_SESSION['sepet'][$eklenecekID])) {
-        $_SESSION['sepet'][$eklenecekID]++;
-    } else {
-        $_SESSION['sepet'][$eklenecekID] = 1;
-    }
-    
-    // Sayfayı yenile (Sepet sayısı güncellensin)
-    header("Location: " . $_SERVER['REQUEST_URI']);
-    exit;
-}
-
-// --- ÜRÜNLERİ ÇEK (OOP) ---
 $urunler = $market->urunleriGetir();
 ?>
 
@@ -55,6 +49,18 @@ $urunler = $market->urunleriGetir();
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="assets/css/products.css">
+
+    <style>
+        .toast-notification {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #2ecc71; color: white; padding: 15px 25px;
+            border-radius: 50px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            font-weight: 600; transform: translateY(100px); opacity: 0;
+            transition: all 0.3s ease; z-index: 1000;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .toast-show { transform: translateY(0); opacity: 1; }
+    </style>
 </head>
 <body>
 
@@ -80,26 +86,22 @@ $urunler = $market->urunleriGetir();
             <?php foreach ($urunler as $urun): ?>
                 
                 <?php 
-                    // Reçete Türü Renklendirme
-                    $renk = '#3498db'; // Mavi (Normal)
-                    $etiket = 'Normal Reçete';
-                    $ikon = 'fa-file-prescription';
+                    $receteTuru = isset($urun['ReceteTuru']) ? $urun['ReceteTuru'] : 'Beyaz';
+                    
+                    // RENK KODLARI
+                    $renk = '#3498db'; $etiket = 'Beyaz Reçete'; $ikon = 'fa-file-prescription';
 
-                    // Veritabanında ReceteTuru null gelirse hata vermesin diye kontrol
-                    $receteTuru = isset($urun['ReceteTuru']) ? $urun['ReceteTuru'] : 'Normal';
-
-                    if ($receteTuru == 'Kirmizi') {
-                        $renk = '#e74c3c'; 
-                        $etiket = 'Kırmızı Reçete';
-                        $ikon = 'fa-triangle-exclamation';
-                    } elseif ($receteTuru == 'Sari') {
-                        $renk = '#f1c40f'; 
-                        $etiket = 'Sarı Reçete';
-                        $ikon = 'fa-capsules';
-                    } elseif ($receteTuru == 'Yesil') {
-                        $renk = '#2ecc71'; 
-                        $etiket = 'Yeşil Reçete';
-                        $ikon = 'fa-leaf';
+                    if ($receteTuru == 'Kirmizi') { 
+                        $renk = '#e74c3c'; $etiket = 'Kırmızı Reçete'; $ikon = 'fa-triangle-exclamation'; 
+                    } 
+                    elseif ($receteTuru == 'Yesil') { 
+                        $renk = '#2ecc71'; $etiket = 'Yeşil Reçete'; $ikon = 'fa-leaf'; 
+                    } 
+                    elseif ($receteTuru == 'Turuncu') { 
+                        $renk = '#f39c12'; $etiket = 'Turuncu Reçete'; $ikon = 'fa-capsules'; 
+                    } 
+                    elseif ($receteTuru == 'Mor') { 
+                        $renk = '#9b59b6'; $etiket = 'Mor Reçete'; $ikon = 'fa-flask'; 
                     }
                 ?>
 
@@ -126,9 +128,9 @@ $urunler = $market->urunleriGetir();
                     </div>
                     
                     <div class="product-actions">
-                        <form method="POST" style="flex: 1;">
+                        <form onsubmit="sepeteEkle(event, this)" style="flex: 1;">
                             <input type="hidden" name="ilac_id" value="<?php echo $urun['IlacID']; ?>">
-                            <button type="submit" name="sepete_ekle" class="btn-action btn-courier" style="width: 100%;">
+                            <button type="submit" class="btn-action btn-courier" style="width: 100%;">
                                 <i class="fa-solid fa-cart-plus"></i> Sepete Ekle
                             </button>
                         </form>
@@ -143,6 +145,55 @@ $urunler = $market->urunleriGetir();
         <?php endif; ?>
 
     </section>
+
+    <div id="toast" class="toast-notification">
+        <i class="fa-solid fa-check-circle"></i> Sepete Eklendi
+    </div>
+
+    <script>
+        function sepeteEkle(e, formElement) {
+            e.preventDefault();
+            let formData = new FormData(formElement);
+            formData.append('ajax_sepete_ekle', '1');
+
+            fetch('ilac-market.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateCartBadge(data.count);
+                    showToast();
+                }
+            })
+            .catch(error => console.error('Hata:', error));
+        }
+
+        function updateCartBadge(count) {
+            let links = document.querySelectorAll('a[href="sepet.php"]');
+            links.forEach(link => {
+                let badge = link.querySelector('span');
+                if (badge) {
+                    badge.innerText = count;
+                } else {
+                    if (count > 0) {
+                        let newBadge = document.createElement('span');
+                        newBadge.style.cssText = "position: absolute; top: -5px; right: -8px; background: #e63946; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 50%;";
+                        newBadge.innerText = count;
+                        link.style.position = 'relative';
+                        link.appendChild(newBadge);
+                    }
+                }
+            });
+        }
+
+        function showToast() {
+            let toast = document.getElementById('toast');
+            toast.classList.add('toast-show');
+            setTimeout(() => { toast.classList.remove('toast-show'); }, 2000);
+        }
+    </script>
 
 </body>
 </html>

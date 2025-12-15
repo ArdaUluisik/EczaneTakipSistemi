@@ -20,10 +20,10 @@ $eczaneAdi = $_SESSION['eczane_adi'];
 $personelAdi = $_SESSION['personel_adi'];
 $mesaj = "";
 
-// --- İŞLEM 1: SIFIRDAN YENİ İLAÇ VE STOK EKLEME (OOP) ---
+// --- İŞLEM 1: SIFIRDAN YENİ İLAÇ VE STOK EKLEME ---
 if (isset($_POST['yeni_ilac_kaydet'])) {
-    // Recete Turu formdan gelmiyor olabilir, varsayılan atayalım
-    $recete = isset($_POST['recete_turu']) ? $_POST['recete_turu'] : 'Normal';
+    // Varsayılan olarak Beyaz ata
+    $recete = isset($_POST['recete_turu']) ? $_POST['recete_turu'] : 'Beyaz';
 
     $sonuc = $stokYonetim->yeniIlacVeStokEkle(
         $eczaneID, 
@@ -42,22 +42,21 @@ if (isset($_POST['yeni_ilac_kaydet'])) {
     }
 }
 
-// --- İŞLEM 2: STOK GÜNCELLEME (OOP) ---
+// --- İŞLEM 2: STOK GÜNCELLEME ---
 if (isset($_POST['stok_guncelle'])) {
     $sonuc = $stokYonetim->guncelle($_POST['stok_id'], $eczaneID, $_POST['adet'], $_POST['fiyat']);
-    
     if($sonuc) $mesaj = "<div class='alert success'><i class='fa-solid fa-check-circle'></i> Güncellendi.</div>";
     else $mesaj = "<div class='alert error'>Hata oluştu.</div>";
 }
 
-// --- İŞLEM 3: SİLME (OOP) ---
+// --- İŞLEM 3: SİLME ---
 if (isset($_GET['sil'])) {
     $stokYonetim->sil($_GET['sil'], $eczaneID);
     header("Location: eczane-panel.php");
     exit;
 }
 
-// --- VERİLERİ ÇEK (OOP) ---
+// --- VERİLERİ ÇEK ---
 $stokListesi = $stokYonetim->listele($eczaneID);
 ?>
 
@@ -160,13 +159,14 @@ $stokListesi = $stokYonetim->listele($eczaneID);
                                 <td>
                                     <div style="font-weight:600; color:#2c3e50; font-size:15px;"><?php echo $stok['IlacAdi']; ?></div>
                                     <?php 
-                                        // GÜVENLİK ÖNLEMİ: ReceteTuru yoksa hata verme, Normal kabul et
-                                        $receteTuru = isset($stok['ReceteTuru']) ? $stok['ReceteTuru'] : 'Normal';
+                                        $receteTuru = isset($stok['ReceteTuru']) ? $stok['ReceteTuru'] : 'Beyaz';
                                         
-                                        $renk = '#95a5a6'; $yazi = 'Normal';
+                                        // YENİ RENK KODLARI
+                                        $renk = '#95a5a6'; $yazi = 'Beyaz Reçete';
                                         if($receteTuru == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
-                                        elseif($receteTuru == 'Sari') { $renk = '#f1c40f'; $yazi = 'Sarı Reçete'; }
+                                        elseif($receteTuru == 'Turuncu') { $renk = '#f39c12'; $yazi = 'Turuncu Reçete'; }
                                         elseif($receteTuru == 'Yesil') { $renk = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
+                                        elseif($receteTuru == 'Mor') { $renk = '#9b59b6'; $yazi = 'Mor Reçete'; }
                                     ?>
                                     <span style="font-size:10px; font-weight:700; color:white; background:<?php echo $renk; ?>; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:3px;">
                                         <?php echo $yazi; ?>
@@ -226,10 +226,11 @@ $stokListesi = $stokYonetim->listele($eczaneID);
                     <div>
                         <label>Reçete Türü</label>
                         <select name="recete_turu" class="form-control" required>
-                            <option value="Normal">Normal</option>
+                            <option value="Beyaz">⚪ Beyaz</option>
                             <option value="Kirmizi">🔴 Kırmızı</option>
-                            <option value="Sari">🟡 Sarı</option>
                             <option value="Yesil">🟢 Yeşil</option>
+                            <option value="Turuncu">🟠 Turuncu</option>
+                            <option value="Mor">🟣 Mor</option>
                         </select>
                     </div>
                 </div>

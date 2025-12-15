@@ -6,7 +6,7 @@ session_start();
 require_once 'classes/Database.php';
 require_once 'classes/Arama.php';
 
-// Hataları gizle (Canlı ortam için)
+// Hataları gizle
 error_reporting(0);
 
 // --- 2. Sınıfları Başlat ---
@@ -32,7 +32,7 @@ if (isset($_POST['sepete_ekle'])) {
     if (isset($_SESSION['sepet'][$eklenecekID])) { $_SESSION['sepet'][$eklenecekID]++; } 
     else { $_SESSION['sepet'][$eklenecekID] = 1; }
     
-    // Sayfayı yenile (Query string'i koruyarak)
+    // Sayfayı yenile
     $queryString = $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '';
     header("Location: " . $_SERVER['PHP_SELF'] . $queryString);
     exit;
@@ -41,7 +41,6 @@ if (isset($_POST['sepete_ekle'])) {
 // 2. ARAMA: Eğer tüm veriler varsa sonuçları çek
 $sonuclar = [];
 if ($gelenIlce != "" && $gelenIlac != "") {
-    // Arama sınıfındaki fonksiyonu kullanıyoruz
     $sonuclar = $aramaMotoru->ilacAra($gelenIlce, $gelenIlac);
 }
 ?>
@@ -73,7 +72,6 @@ if ($gelenIlce != "" && $gelenIlac != "") {
                         style="border: none; background: transparent; padding: 15px; font-size: 16px; cursor: pointer; flex: 1; outline: none;">
                     <option value="">Şehir Seçiniz</option>
                     <?php
-                    // Sayfa ilk açıldığında İlleri PHP ile dolduruyoruz (Hız için)
                     $iller = $aramaMotoru->illeriGetir();
                     foreach ($iller as $il) {
                         $secili = ($il['IlID'] == $gelenSehir) ? 'selected' : '';
@@ -87,7 +85,7 @@ if ($gelenIlce != "" && $gelenIlac != "") {
                 <select name="ilce" id="ilceKutusu" required
                         style="border: none; background: transparent; padding: 15px; font-size: 16px; cursor: pointer; flex: 1; outline: none;">
                     <option value="">Önce Şehir Seçiniz</option>
-                    </select>
+                </select>
 
                 <div style="width: 1px; height: 30px; background-color: #ddd;"></div>
 
@@ -103,8 +101,6 @@ if ($gelenIlce != "" && $gelenIlac != "") {
         </div>
     </header>
 
-    
-
     <section class="results-container" style="padding: 40px; max-width: 1200px; margin: 0 auto;">
         
         <?php if (!empty($sonuclar)): ?>
@@ -114,12 +110,13 @@ if ($gelenIlce != "" && $gelenIlac != "") {
                 <?php foreach ($sonuclar as $row): ?>
                     
                     <?php 
-                        // Reçete Rengi
-                        $renkKod = '#3498db'; $yazi = 'Normal Reçete';
+                        // --- YENİ RENK SİSTEMİ ---
+                        $renkKod = '#95a5a6'; $yazi = 'Beyaz Reçete';
                         if (isset($row['ReceteTuru'])) {
                             if ($row['ReceteTuru'] == 'Kirmizi') { $renkKod = '#e74c3c'; $yazi = 'Kırmızı Reçete'; } 
-                            elseif ($row['ReceteTuru'] == 'Sari') { $renkKod = '#f1c40f'; $yazi = 'Sarı Reçete'; } 
+                            elseif ($row['ReceteTuru'] == 'Turuncu') { $renkKod = '#f39c12'; $yazi = 'Turuncu Reçete'; } 
                             elseif ($row['ReceteTuru'] == 'Yesil') { $renkKod = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
+                            elseif ($row['ReceteTuru'] == 'Mor') { $renkKod = '#9b59b6'; $yazi = 'Mor Reçete'; }
                         }
                     ?>
 
@@ -169,7 +166,6 @@ if ($gelenIlce != "" && $gelenIlac != "") {
     </section>
 
     <script>
-        // Sayfa yüklendiğinde, eğer daha önce bir şehir seçildiyse ilçeleri getir ve seçili yap
         document.addEventListener('DOMContentLoaded', function() {
             var seciliSehir = "<?php echo $gelenSehir; ?>";
             var seciliIlce  = "<?php echo $gelenIlce; ?>";
@@ -183,13 +179,11 @@ if ($gelenIlce != "" && $gelenIlac != "") {
             var sehirID = document.getElementById('sehirKutusu').value;
             var ilceKutusu = document.getElementById('ilceKutusu');
 
-            // Şehir seçilmemişse ilçeyi temizle
             if (sehirID === "") {
                 ilceKutusu.innerHTML = '<option value="">Önce Şehir Seçiniz</option>';
                 return;
             }
 
-            // API'ye İstek At (api.php)
             fetch('api.php?type=get_districts&il_id=' + sehirID)
                 .then(response => response.json())
                 .then(data => {
