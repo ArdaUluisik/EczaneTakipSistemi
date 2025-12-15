@@ -1,8 +1,17 @@
 <?php
 session_start();
-require 'db.php'; 
+
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Market.php';
+require_once 'classes/Siparis.php';
 
 error_reporting(0);
+
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$market = new Market($db);
+$siparisYonetim = new Siparis($db);
 
 // Sepetten ürün silme
 if (isset($_GET['sil'])) {
@@ -19,87 +28,37 @@ if (isset($_GET['bosalt'])) {
     exit;
 }
 
-// --- SİPARİŞİ TAMAMLAMA, KAYDETME VE STOKTAN DÜŞME İŞLEMİ ---
+// --- SİPARİŞİ TAMAMLAMA (OOP) ---
 if (isset($_POST['siparis_onayla'])) {
 
-    // 1. GÜVENLİK: Giriş kontrolü
+    // Giriş kontrolü
     if (!isset($_SESSION['hasta_id'])) {
         echo "<script>alert('Lütfen önce giriş yapınız.'); window.location.href='hasta-login.php';</script>";
         exit;
     }
     
     $hastaID = $_SESSION['hasta_id'];
-    $teslimat = $_POST['teslimat_turu']; // kurye veya eczane
-    $odeme    = $_POST['odeme_turu'];
+    $teslimat = $_POST['teslimat_turu'];
     
-    // Kurye ücreti kontrolü
-    $ekstraUcret = ($teslimat == 'kurye') ? 50 : 0;
-    
-    // 2. VERİTABANI İŞLEMLERİ (Transaction)
-    try {
-        $pdo->beginTransaction(); // İşlemi başlat
+    // Sınıfı kullanarak siparişi oluştur
+    $sonuc = $siparisYonetim->siparisOlustur($hastaID, $_SESSION['sepet'], $teslimat);
 
-        // A. Önce Siparişin "Başlığını" Oluştur (Toplam tutarı sonra güncelleyeceğiz)
-        $siparisEkle = $pdo->prepare("INSERT INTO Siparisler (HastaID, ToplamTutar, Durum) VALUES (?, 0, 'Bekleniyor')");
-        $siparisEkle->execute([$hastaID]);
-        $yeniSiparisID = $pdo->lastInsertId(); // Oluşan Sipariş ID'sini al
-
-        $gercekToplamTutar = 0;
-
-        foreach ($_SESSION['sepet'] as $ilacID => $adet) {
-            
-            // B. En uygun fiyatlı ve stoğu olan eczaneyi bul
-            // SQL Şemana göre: EczaneStok tablosunda EczaneID, IlacID, Fiyat ve Adet var.
-            $stokBul = $pdo->prepare("SELECT StokID, EczaneID, Fiyat FROM EczaneStok WHERE IlacID = ? AND Adet >= ? ORDER BY Fiyat ASC LIMIT 1");
-            $stokBul->execute([$ilacID, $adet]);
-            $stokKaydi = $stokBul->fetch(PDO::FETCH_ASSOC);
-
-            if ($stokKaydi) {
-                $eczaneID = $stokKaydi['EczaneID'];
-                $birimFiyat = $stokKaydi['Fiyat'];
-                $stokID = $stokKaydi['StokID'];
-                
-                // C. Stoğu Düş (UPDATE)
-                $stokGuncelle = $pdo->prepare("UPDATE EczaneStok SET Adet = Adet - ? WHERE StokID = ?");
-                $stokGuncelle->execute([$adet, $stokID]);
-
-                // D. Sipariş Detayını Kaydet (INSERT) -> SQL Şemana uygun: SiparisDetay
-                $detayEkle = $pdo->prepare("INSERT INTO SiparisDetay (SiparisID, IlacID, EczaneID, Adet, BirimFiyat) VALUES (?, ?, ?, ?, ?)");
-                $detayEkle->execute([$yeniSiparisID, $ilacID, $eczaneID, $adet, $birimFiyat]);
-
-                // Toplam tutarı hesapla
-                $gercekToplamTutar += ($birimFiyat * $adet);
-
-            } else {
-                // Eğer stok yetersizse hata fırlat ve her şeyi geri al
-                throw new Exception("Sepetinizdeki bazı ilaçlar (ID: $ilacID) için yeterli stok bulunamadı.");
-            }
-        }
-
-        // E. Siparişin Son Toplam Tutarını Güncelle (Kurye ücreti dahil)
-        $sonTutar = $gercekToplamTutar + $ekstraUcret;
-        $tutarGuncelle = $pdo->prepare("UPDATE Siparisler SET ToplamTutar = ? WHERE SiparisID = ?");
-        $tutarGuncelle->execute([$sonTutar, $yeniSiparisID]);
-
-        $pdo->commit(); // Hata yoksa veritabanına işle
-        
-        // 3. SEPETİ TEMİZLE VE MESAJ VER
+    if ($sonuc['status']) {
+        // Başarılı
         unset($_SESSION['sepet']);
-        
-        $mesaj = "Siparişiniz Alındı! Sipariş Numaranız: " . $yeniSiparisID;
+        $mesaj = "Siparişiniz Alındı! Sipariş Numaranız: " . $sonuc['siparis_id'];
         if ($teslimat == 'kurye') $mesaj .= "\\nKurye en kısa sürede yola çıkacak.";
         
         echo "<script>alert('$mesaj'); window.location.href='index.php';</script>";
         exit;
-
-    } catch (Exception $e) {
-        $pdo->rollBack(); // Hata varsa yapılan tüm işlemleri iptal et
-        echo "<script>alert('Sipariş oluşturulurken hata: " . $e->getMessage() . "'); window.location.href='sepet.php';</script>";
+    } else {
+        // Hata
+        echo "<script>alert('Sipariş oluşturulurken hata: " . $sonuc['mesaj'] . "'); window.location.href='sepet.php';</script>";
         exit;
     }
 }
 
-// Sepet Listeleme Kısmı (Görünüm - Burası aynı kalabilir, sadece tablo isimlerine dikkat)
+// --- SEPET LİSTELEME (OOP) ---
 $sepetUrunleri = [];
 $toplamTutar = 0;
 
@@ -107,15 +66,8 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
     $ids = array_keys($_SESSION['sepet']);
     $idListesi = implode(',', $ids);
 
-    // SQL Şemana uygun: Ilaclar ve EczaneStok tablosu
-    $sql = "SELECT i.IlacID, i.IlacAdi, i.ResimYolu, i.ReceteTuru, MIN(es.Fiyat) as BirimFiyat 
-            FROM Ilaclar i 
-            JOIN EczaneStok es ON i.IlacID = es.IlacID 
-            WHERE i.IlacID IN ($idListesi) AND es.Adet > 0
-            GROUP BY i.IlacID";
-            
-    $stmt = $pdo->query($sql);
-    $dbUrunler = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Market sınıfından verileri çek
+    $dbUrunler = $market->sepetUrunleriniGetir($idListesi);
 
     foreach ($dbUrunler as $urun) {
         $adet = $_SESSION['sepet'][$urun['IlacID']];
@@ -246,10 +198,13 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
                                         <div>
                                             <div class="product-name"><?php echo htmlspecialchars($urun['IlacAdi']); ?></div>
                                             <?php 
+                                                // Reçete Türü Renklendirme
+                                                $receteTuru = isset($urun['ReceteTuru']) ? $urun['ReceteTuru'] : 'Normal';
+                                                
                                                 $renk = '#95a5a6'; $yazi = 'Normal';
-                                                if($urun['ReceteTuru'] == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
-                                                elseif($urun['ReceteTuru'] == 'Sari') { $renk = '#f1c40f'; $yazi = 'Sarı Reçete'; }
-                                                elseif($urun['ReceteTuru'] == 'Yesil') { $renk = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
+                                                if($receteTuru == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
+                                                elseif($receteTuru == 'Sari') { $renk = '#f1c40f'; $yazi = 'Sarı Reçete'; }
+                                                elseif($receteTuru == 'Yesil') { $renk = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
                                             ?>
                                             <span style="font-size:11px; font-weight:700; color:white; background:<?php echo $renk; ?>; padding:2px 8px; border-radius:10px; display:inline-block;">
                                                 <?php echo $yazi; ?>

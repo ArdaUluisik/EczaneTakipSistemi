@@ -1,11 +1,17 @@
 <?php
 session_start();
-require 'db.php'; 
+
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Arama.php';
 
 // Hataları gizle
 error_reporting(0);
 setlocale(LC_TIME, 'tr_TR.UTF-8', 'tr_TR', 'tr', 'turkish');
-$bugun = date('Y-m-d');
+
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$aramaMotoru = new Arama($db);
 
 // Filtre Değerlerini Al
 $sehirID = isset($_GET['sehir']) ? $_GET['sehir'] : '';
@@ -14,36 +20,10 @@ $aramaYapildi = isset($_GET['btn_ara']); // Butona basıldı mı?
 
 $eczaneler = [];
 
-// SADECE BUTONA BASILDIYSA SORGULA
+// SADECE BUTONA BASILDIYSA SORGULA (Sınıf Üzerinden)
 if ($aramaYapildi) {
-    $sql = "SELECT 
-                e.EczaneID, e.EczaneAdi, e.Adres, e.Telefon, e.Enlem, e.Boylam,
-                i.IlAdi, ilc.IlceAdi, 
-                nc.Aciklama as NobetNotu
-            FROM NobetCizelgesi nc
-            JOIN Eczaneler e ON nc.EczaneID = e.EczaneID
-            JOIN Ilceler ilc ON e.IlceID = ilc.IlceID  
-            JOIN Iller i ON ilc.IlID = i.IlID          
-            WHERE nc.NobetTarihi = :bugun";
-
-    if ($sehirID != '') {
-        $sql .= " AND i.IlID = :sehir";
-    }
-    if ($ilceID != '') {
-        $sql .= " AND e.IlceID = :ilce";
-    }
-
-    $sql .= " ORDER BY e.EczaneAdi ASC";
-
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':bugun', $bugun);
-        if ($sehirID != '') $stmt->bindValue(':sehir', $sehirID);
-        if ($ilceID != '')  $stmt->bindValue(':ilce', $ilceID);
-        
-        $stmt->execute();
-        $eczaneler = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) { }
+    // Eski SQL kodları yerine tek satırlık sınıf çağrısı:
+    $eczaneler = $aramaMotoru->nobetciEczaneleriGetir($sehirID, $ilceID);
 }
 ?>
 
@@ -129,7 +109,8 @@ if ($aramaYapildi) {
         <select name="sehir" class="filter-select" onchange="this.form.submit()">
             <option value="">Şehir Seçiniz</option>
             <?php
-            $iller = $pdo->query("SELECT * FROM Iller ORDER BY IlAdi ASC")->fetchAll();
+            // SQL yerine Sınıf metodu kullanıyoruz
+            $iller = $aramaMotoru->illeriGetir();
             foreach ($iller as $il) {
                 $selected = ($il['IlID'] == $sehirID) ? 'selected' : '';
                 echo "<option value='".$il['IlID']."' $selected>".$il['IlAdi']."</option>";
@@ -141,9 +122,8 @@ if ($aramaYapildi) {
             <option value="">İlçe Seçiniz</option>
             <?php
             if ($sehirID) {
-                $stmt = $pdo->prepare("SELECT * FROM Ilceler WHERE IlID = :id ORDER BY IlceAdi ASC");
-                $stmt->execute(['id' => $sehirID]);
-                $ilceler = $stmt->fetchAll();
+                // SQL yerine Sınıf metodu kullanıyoruz
+                $ilceler = $aramaMotoru->ilceleriGetir($sehirID);
                 foreach ($ilceler as $ilce) {
                     $selected = ($ilce['IlceID'] == $ilceID) ? 'selected' : '';
                     echo "<option value='".$ilce['IlceID']."' $selected>".$ilce['IlceAdi']."</option>";

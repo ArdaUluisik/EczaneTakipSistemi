@@ -1,40 +1,40 @@
 <?php
 session_start();
-require 'db.php'; 
+
+// 1. ADIM: OOP Sınıflarını Dahil Et
+// Artık eski 'db.php' yerine yeni Sınıflarımızı çağırıyoruz.
+require_once 'classes/Database.php';
+require_once 'classes/Personel.php';
 
 $hataMesaji = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $tc = $_POST['tcno'];
-    $sifre = $_POST['sifre'];
-
-    // 1. GÜNCELLEME: Personel ve Eczane tablolarını birleştiren sorgu
-    // Bu sayede personelin hangi eczanede çalıştığını öğreniyoruz.
-    $sql = "SELECT p.*, e.EczaneAdi 
-            FROM personel p 
-            JOIN eczaneler e ON p.EczaneID = e.EczaneID 
-            WHERE p.TCNo = :tc AND p.Sifre = :sifre";
     
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['tc' => $tc, 'sifre' => $sifre]);
-        $personel = $stmt->fetch(PDO::FETCH_ASSOC);
+    // 2. ADIM: Veritabanı ve Personel Nesnesini Hazırla
+    $db = Database::getInstance()->getConnection();
+    $personel = new Personel($db);
 
-        if ($personel) {
-            // 2. GÜNCELLEME: Panele lazım olan bilgileri oturuma kaydet
-            $_SESSION['personel_id'] = $personel['PersonelID'];
-            $_SESSION['personel_adi'] = $personel['AdSoyad']; // Panelde "Hoşgeldin Ahmet" demek için
-            $_SESSION['eczane_id'] = $personel['EczaneID'];     // Panelde hangi ilaçları göstereceğimizi bilmek için
-            $_SESSION['eczane_adi'] = $personel['EczaneAdi'];   // Panel başlığı için
-            
-            // 3. GÜNCELLEME: Doğrudan yönetim paneline yönlendir
-            header("Location: eczane-panel.php"); 
-            exit;
-        } else {
-            $hataMesaji = "TC Kimlik Numaranız veya Şifreniz hatalı.";
-        }
-    } catch (PDOException $e) {
-        $hataMesaji = "Bir hata oluştu: " . $e->getMessage();
+    // Formdan gelen verileri Nesneye (Class'a) veriyoruz
+    $personel->tc = $_POST['tcno'];
+    $personel->sifre = $_POST['sifre'];
+
+    // 3. ADIM: Sınıfın içindeki girisYap() fonksiyonunu çalıştır
+    if ($personel->girisYap()) {
+        
+        // Giriş Başarılı! 
+        // Bilgileri Personel sınıfının içinden alıp Session'a atıyoruz.
+        $_SESSION['personel_id']  = $personel->id;
+        $_SESSION['personel_adi'] = $personel->ad_soyad;
+        $_SESSION['eczane_id']    = $personel->eczane_id;
+        $_SESSION['eczane_adi']   = $personel->eczane_adi;
+        
+        // Panele yönlendir
+        header("Location: eczane-panel.php"); 
+        exit;
+
+    } else {
+        // Giriş Başarısız
+        $hataMesaji = "TC Kimlik Numaranız veya Şifreniz hatalı.";
     }
 }
 ?>

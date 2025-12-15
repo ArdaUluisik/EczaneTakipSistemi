@@ -1,19 +1,28 @@
 <?php
 // api.php
-require 'db.php';
+
+// 1. Yeni OOP Sınıflarını Dahil Et
+require_once 'classes/Database.php';
+require_once 'classes/Arama.php';
+
+// JSON formatında çıktı verileceğini belirt
 header('Content-Type: application/json; charset=utf-8');
 
+// 2. Sınıfları Başlat
+$db = Database::getInstance()->getConnection();
+$aramaMotoru = new Arama($db);
+
+// İsteğin türünü al
 $type = isset($_GET['type']) ? $_GET['type'] : '';
 
 if ($type == 'get_cities') {
-    // Tüm İlleri Getir
-    $stmt = $pdo->query("SELECT IlID, IlAdi FROM Iller ORDER BY IlAdi ASC");
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    // Arama sınıfındaki fonksiyonu kullan
+    $iller = $aramaMotoru->illeriGetir();
+    echo json_encode($iller);
 
 } elseif ($type == 'get_districts' && isset($_GET['il_id'])) {
-    // Seçilen İlin İlçelerini Getir
-    $stmt = $pdo->prepare("SELECT IlceID, IlceAdi FROM Ilceler WHERE IlID = :il_id ORDER BY IlceAdi ASC");
-    $stmt->execute(['il_id' => $_GET['il_id']]);
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    // Arama sınıfındaki fonksiyonu kullan
+    $ilceler = $aramaMotoru->ilceleriGetir($_GET['il_id']);
+    echo json_encode($ilceler);
 }
 ?>

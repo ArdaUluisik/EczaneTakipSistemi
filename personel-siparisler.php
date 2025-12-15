@@ -1,61 +1,51 @@
 <?php
 session_start();
-require 'db.php';
 
-// 1. GÜVENLİK KONTROLÜ
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Siparis.php';
+
+// GÜVENLİK KONTROLÜ
 if (!isset($_SESSION['personel_id'])) {
     header("Location: login.php");
     exit;
 }
 
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$siparisYonetim = new Siparis($db);
+
 $personelID = $_SESSION['personel_id'];
 
-// 2. PERSONELİN ECZANE ID'SİNİ BUL
-// Oturumda kayıtlı değilse veritabanından çekelim
+// 3. PERSONELİN ECZANE ID'SİNİ BUL (OOP)
+// Oturumda kayıtlı değilse sınıftan çekelim
 if (!isset($_SESSION['eczane_id'])) {
-    $stmtP = $pdo->prepare("SELECT EczaneID, AdSoyad FROM Personel WHERE PersonelID = ?");
-    $stmtP->execute([$personelID]);
-    $personelData = $stmtP->fetch(PDO::FETCH_ASSOC);
-    $_SESSION['eczane_id'] = $personelData['EczaneID'];
-    $_SESSION['personel_adi'] = $personelData['AdSoyad'];
+    $personelData = $siparisYonetim->personelBilgisiGetir($personelID);
+    if ($personelData) {
+        $_SESSION['eczane_id'] = $personelData['EczaneID'];
+        $_SESSION['personel_adi'] = $personelData['AdSoyad'];
+    }
 }
 $eczaneID = $_SESSION['eczane_id'];
 
-// 3. DURUM GÜNCELLEME İŞLEMİ
+// 4. DURUM GÜNCELLEME İŞLEMİ (OOP)
 if (isset($_POST['durum_guncelle'])) {
     $siparisID = $_POST['siparis_id'];
     $yeniDurum = $_POST['yeni_durum'];
 
-    // Siparişin genel durumunu güncelliyoruz
-    $upd = $pdo->prepare("UPDATE Siparisler SET Durum = ? WHERE SiparisID = ?");
-    $upd->execute([$yeniDurum, $siparisID]);
+    // Sınıfı kullanarak güncelle
+    $siparisYonetim->durumGuncelle($siparisID, $yeniDurum);
     
-    // Sayfayı yenile (form tekrar gönderilmesin diye)
+    // Sayfayı yenile
     header("Location: personel-siparisler.php");
     exit;
 }
 
-// 4. SİPARİŞLERİ ÇEKME (Karmaşık Sorgu)
-// Mantık: SiparisDetay tablosundan SADECE benim eczaneme ait olan satırları,
-// Siparisler ve Hastalar tablosuyla birleştirerek getir.
-$sql = "SELECT 
-            s.SiparisID, s.SiparisTarihi, s.Durum, s.ToplamTutar,
-            h.AdSoyad AS HastaAdi, h.Telefon, h.Adres,
-            d.IlacID, d.Adet, d.BirimFiyat,
-            i.IlacAdi, i.ReceteTuru
-        FROM SiparisDetay d
-        JOIN Siparisler s ON d.SiparisID = s.SiparisID
-        JOIN Hastalar h ON s.HastaID = h.HastaID
-        JOIN Ilaclar i ON d.IlacID = i.IlacID
-        WHERE d.EczaneID = ?
-        ORDER BY s.SiparisTarihi DESC";
+// 5. SİPARİŞLERİ ÇEKME (OOP)
+// Ham veriyi sınıftan alıyoruz
+$satirlar = $siparisYonetim->eczaneSiparisleriniGetir($eczaneID);
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute([$eczaneID]);
-$satirlar = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// 5. VERİLERİ GRUPLAMA
-// SQL satır satır ilaç döndürür, biz bunları Sipariş bazında gruplamalıyız.
+// 6. VERİLERİ GRUPLAMA (View Mantığı - Aynen Korundu)
 $siparisler = [];
 foreach ($satirlar as $row) {
     $id = $row['SiparisID'];
@@ -71,7 +61,7 @@ foreach ($satirlar as $row) {
                 'Adres' => $row['Adres'],
             ],
             'urunler' => [],
-            'toplamTutar' => 0 // Sadece benim eczanemdeki tutar
+            'toplamTutar' => 0 
         ];
     }
     
@@ -80,10 +70,11 @@ foreach ($satirlar as $row) {
         'IlacAdi' => $row['IlacAdi'],
         'Adet' => $row['Adet'],
         'Fiyat' => $row['BirimFiyat'],
-        'Recete' => $row['ReceteTuru']
+        // Eğer ReceteTuru veritabanında yoksa hata vermemesi için kontrol:
+        'Recete' => isset($row['ReceteTuru']) ? $row['ReceteTuru'] : 'Normal'
     ];
     
-    // Eczane bazlı toplam tutarı hesapla
+    // Toplam tutarı hesapla
     $siparisler[$id]['toplamTutar'] += ($row['Adet'] * $row['BirimFiyat']);
 }
 ?>
@@ -235,6 +226,7 @@ foreach ($satirlar as $row) {
                                             $rRenk = '#95a5a6'; 
                                             if($urun['Recete']=='Kirmizi') $rRenk='#e74c3c';
                                             elseif($urun['Recete']=='Yesil') $rRenk='#2ecc71';
+                                            elseif($urun['Recete']=='Sari') $rRenk='#f1c40f';
                                         ?>
                                         <span class="recete-badge" style="background:<?php echo $rRenk; ?>"><?php echo $urun['Recete']; ?></span>
                                     </td>

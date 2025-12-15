@@ -1,6 +1,9 @@
 <?php
 session_start();
-require 'db.php';
+
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Siparis.php';
 
 // Güvenlik: Sadece giriş yapmış hastalar görebilir
 if (!isset($_SESSION['hasta_id'])) {
@@ -8,22 +11,25 @@ if (!isset($_SESSION['hasta_id'])) {
     exit;
 }
 
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$siparisYonetim = new Siparis($db);
+
 $hastaID = $_SESSION['hasta_id'];
 
-// 1. Ana Siparişleri Çek
-$sql = "SELECT * FROM Siparisler WHERE HastaID = ? ORDER BY SiparisTarihi DESC";
-$stmt = $pdo->prepare($sql);
-$stmt->execute([$hastaID]);
-$siparisler = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+// 3. Ana Siparişleri Çek (OOP)
+$siparisler = $siparisYonetim->hastaSiparisleriniGetir($hastaID);
 ?>
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <title>Siparişlerim | e-Ecza</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/main.css">
+    
     <style>
         body { background-color: #f8f9fa; font-family: 'Poppins', sans-serif; }
         .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
@@ -112,7 +118,7 @@ $siparisler = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="container">
         <h2 class="page-title"><i class="fa-solid fa-box-open"></i> Sipariş Geçmişim</h2>
 
-        <?php if (count($siparisler) == 0): ?>
+        <?php if (empty($siparisler)): ?>
             <div class="empty-state">
                 <i class="fa-solid fa-clipboard-list" style="font-size: 60px; margin-bottom: 20px;"></i>
                 <h3>Henüz hiç siparişiniz yok.</h3>
@@ -145,16 +151,9 @@ $siparisler = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <div class="order-body">
                         <?php
-                        // Bu siparişe ait detayları çek
-                        // Ilaclar ve Eczaneler tablolarıyla birleştirerek isimleri alıyoruz
-                        $detaySql = "SELECT d.*, i.IlacAdi, e.EczaneAdi 
-                                     FROM SiparisDetay d
-                                     JOIN Ilaclar i ON d.IlacID = i.IlacID
-                                     JOIN Eczaneler e ON d.EczaneID = e.EczaneID
-                                     WHERE d.SiparisID = ?";
-                        $stmtDetay = $pdo->prepare($detaySql);
-                        $stmtDetay->execute([$siparis['SiparisID']]);
-                        $detaylar = $stmtDetay->fetchAll(PDO::FETCH_ASSOC);
+                        // Bu siparişe ait detayları çek (OOP)
+                        // Döngü içinde tekrar sınıfa gidiyoruz (N+1 sorunu olsa da, bu basit bir proje için kabul edilebilir)
+                        $detaylar = $siparisYonetim->siparisDetaylariniGetir($siparis['SiparisID']);
                         ?>
 
                         <?php foreach ($detaylar as $detay): ?>

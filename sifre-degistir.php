@@ -1,12 +1,19 @@
 <?php
 session_start();
-require 'db.php';
+
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Hasta.php';
 
 // Güvenlik
 if (!isset($_SESSION['hasta_id'])) {
     header("Location: hasta-login.php");
     exit;
 }
+
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$hastaNesnesi = new Hasta($db);
 
 $mesaj = "";
 $mesajTuru = "";
@@ -27,32 +34,19 @@ if ($_POST) {
         $mesaj = "Yeni şifreler birbiriyle uyuşmuyor!";
         $mesajTuru = "error";
     }
-    // 3. Eski şifre ile yeni şifre aynı mı? (Güvenlik tercihi)
+    // 3. Eski şifre ile yeni şifre aynı mı?
     elseif ($eskiSifre === $yeniSifre) {
         $mesaj = "Yeni şifreniz eski şifrenizle aynı olamaz.";
         $mesajTuru = "error";
     }
     else {
-        // 4. Veritabanından eski şifreyi kontrol et
-        $stmt = $pdo->prepare("SELECT Sifre FROM hastalar WHERE HastaID = ?");
-        $stmt->execute([$hastaID]);
-        $mevcutVeri = $stmt->fetch();
+        // 4. Şifre Değiştirme İşlemi (OOP)
+        // Sınıfın içindeki fonksiyon hem kontrolü hem de güncellemeyi yapar
+        $sonuc = $hastaNesnesi->sifreDegistir($hastaID, $eskiSifre, $yeniSifre);
 
-        // Eğer veritabanındaki şifre ile girilen eski şifre aynıysa
-        if ($mevcutVeri['Sifre'] === $eskiSifre) {
-            
-            // Şifreyi Güncelle
-            $update = $pdo->prepare("UPDATE hastalar SET Sifre = ? WHERE HastaID = ?");
-            $sonuc = $update->execute([$yeniSifre, $hastaID]);
-
-            if ($sonuc) {
-                $mesaj = "Şifreniz başarıyla değiştirildi.";
-                $mesajTuru = "success";
-            } else {
-                $mesaj = "Bir hata oluştu.";
-                $mesajTuru = "error";
-            }
-
+        if ($sonuc) {
+            $mesaj = "Şifreniz başarıyla değiştirildi.";
+            $mesajTuru = "success";
         } else {
             $mesaj = "Girdiğiniz ESKİ şifre hatalı!";
             $mesajTuru = "error";

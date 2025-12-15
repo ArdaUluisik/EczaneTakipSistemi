@@ -1,48 +1,43 @@
 <?php
-require 'db.php'; 
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Hasta.php';
 
 $mesaj = "";
 $mesajTuru = ""; 
 
 if ($_POST) {
+    // Form verilerini al
     $tc = $_POST['tc'];
     $adsoyad = $_POST['adsoyad'];
     $telefon = $_POST['telefon'];
     $adres = $_POST['adres'];
     $sifre = $_POST['sifre'];
 
+    // Basit doğrulama (Boş alan kontrolü)
     if (empty($tc) || empty($adsoyad) || empty($sifre)) {
         $mesaj = "Lütfen zorunlu alanları (TC, Ad Soyad, Şifre) doldurunuz.";
         $mesajTuru = "error";
     } else {
-        try {
-            // Sadece Procedure Çağırıyoruz
-            // Mantık (TC Kontrolü vs.) tamamen veritabanında yapılıyor
-            $sql = "CALL sp_HastaKayit(:tc, :ad, :tel, :adr, :sif)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                'tc' => $tc,
-                'ad' => $adsoyad,
-                'tel' => $telefon,
-                'adr' => $adres,
-                'sif' => $sifre
-            ]);
-            
-            $sonuc = $stmt->fetch(PDO::FETCH_ASSOC);
+        // --- 2. Sınıfları Başlat ve Kayıt Ol ---
+        // Veritabanı bağlantısını Singleton deseninden alıyoruz
+        $db = Database::getInstance()->getConnection();
+        
+        // Hasta sınıfını başlatıyoruz
+        $hasta = new Hasta($db);
 
-            if ($sonuc['Sonuc'] == 1) {
-                // Başarılı
-                $mesaj = "✅ " . $sonuc['Mesaj'] . " Giriş sayfasına yönlendiriliyorsunuz...";
-                $mesajTuru = "success";
-                header("refresh:2;url=hasta-login.php"); 
-            } else {
-                // Hata (Zaten kayıtlı vs.)
-                $mesaj = "❌ " . $sonuc['Mesaj'];
-                $mesajTuru = "error";
-            }
+        // Sınıfın içindeki kayitOl metodunu çağırıyoruz (Stored Procedure burada çalışır)
+        $sonuc = $hasta->kayitOl($tc, $adsoyad, $telefon, $adres, $sifre);
 
-        } catch (PDOException $e) {
-            $mesaj = "Sistem Hatası: " . $e->getMessage();
+        // Sonucu işle (Prosedürden dönen Sonuc: 1 ise Başarılı, 0 ise Hata)
+        if ($sonuc['Sonuc'] == 1) {
+            // Başarılı
+            $mesaj = "✅ " . $sonuc['Mesaj'] . " Giriş sayfasına yönlendiriliyorsunuz...";
+            $mesajTuru = "success";
+            header("refresh:2;url=hasta-login.php"); 
+        } else {
+            // Hata (Zaten kayıtlı vb.)
+            $mesaj = "❌ " . $sonuc['Mesaj'];
             $mesajTuru = "error";
         }
     }
