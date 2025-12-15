@@ -1,6 +1,9 @@
 <?php
 session_start();
-require 'db.php';
+
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Hasta.php';
 
 // Güvenlik: Giriş yapmayan giremez
 if (!isset($_SESSION['hasta_id'])) {
@@ -8,37 +11,33 @@ if (!isset($_SESSION['hasta_id'])) {
     exit;
 }
 
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$hastaNesnesi = new Hasta($db);
+
 $mesaj = "";
 $mesajTuru = "";
 $hastaID = $_SESSION['hasta_id'];
 
-// --- GÜNCELLEME İŞLEMİ (Sadece Telefon ve Adres) ---
+// --- GÜNCELLEME İŞLEMİ (OOP) ---
 if ($_POST) {
     $telefon = $_POST['telefon'];
     $adres = $_POST['adres'];
 
-    try {
-        $sql = "UPDATE hastalar SET Telefon = ?, Adres = ? WHERE HastaID = ?";
-        $stmt = $pdo->prepare($sql);
-        $sonuc = $stmt->execute([$telefon, $adres, $hastaID]);
+    // Sınıfın güncelleme metodunu çağır
+    $sonuc = $hastaNesnesi->bilgileriGuncelle($hastaID, $telefon, $adres);
 
-        if ($sonuc) {
-            $mesaj = "İletişim bilgileriniz güncellendi.";
-            $mesajTuru = "success";
-        } else {
-            $mesaj = "Güncelleme yapılamadı.";
-            $mesajTuru = "error";
-        }
-    } catch (PDOException $e) {
-        $mesaj = "Hata: " . $e->getMessage();
+    if ($sonuc) {
+        $mesaj = "İletişim bilgileriniz güncellendi.";
+        $mesajTuru = "success";
+    } else {
+        $mesaj = "Güncelleme yapılamadı.";
         $mesajTuru = "error";
     }
 }
 
-// Mevcut bilgileri çek
-$stmt = $pdo->prepare("SELECT * FROM hastalar WHERE HastaID = ?");
-$stmt->execute([$hastaID]);
-$bilgi = $stmt->fetch();
+// --- MEVCUT BİLGİLERİ ÇEK (OOP) ---
+$bilgi = $hastaNesnesi->bilgileriGetir($hastaID);
 ?>
 
 <!DOCTYPE html>

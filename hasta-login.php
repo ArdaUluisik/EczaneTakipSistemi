@@ -2,42 +2,42 @@
 // DOSYA ADI: hasta-login.php
 session_start();
 
+// 1. OOP Sınıflarını Dahil Et
+require_once 'classes/Database.php';
+require_once 'classes/Hasta.php';
+
 // GÜVENLİK: Eğer zaten giriş yapılmışsa, direkt ana sayfaya at
 if (isset($_SESSION['hasta_id'])) {
     header("Location: index.php");
     exit;
 }
 
-require 'db.php'; // Veritabanı bağlantısı
-
 $hataMesaji = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $tc = $_POST['tcno'];
-    $sifre = $_POST['sifre'];
+    // 2. Sınıfları Başlat
+    $db = Database::getInstance()->getConnection();
+    $hasta = new Hasta($db);
 
-    // SQL Sorgusu: TC ve Şifre eşleşiyor mu?
-    // Not: Şifreler hash'li değil, düz metin (Okul projesi standardı)
-    $sql = "SELECT * FROM hastalar WHERE TCNo = :tc AND Sifre = :sifre";
-    
-    try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['tc' => $tc, 'sifre' => $sifre]);
-        $hasta = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Formdan gelen verileri sınıfa ver
+    // Not: Formdaki input name="tcno", Sınıftaki özellik $tc
+    $hasta->tc = $_POST['tcno'];
+    $hasta->sifre = $_POST['sifre'];
 
-        if ($hasta) {
-            // Giriş Başarılı: Oturum aç
-            $_SESSION['hasta_id'] = $hasta['HastaID'];
-            $_SESSION['ad_soyad'] = $hasta['AdSoyad'];
-            
-            // Hastayı ana sayfaya yönlendir
-            header("Location: index.php"); 
-            exit;
-        } else {
-            $hataMesaji = "TC Kimlik No veya Şifre hatalı!";
-        }
-    } catch (PDOException $e) {
-        $hataMesaji = "Sistem hatası: " . $e->getMessage();
+    // 3. Giriş Yapmayı Dene (Sınıfın içindeki girisYap fonksiyonu çalışır)
+    if ($hasta->girisYap()) {
+        
+        // Giriş Başarılı: Oturum aç
+        // Sınıf, giriş başarılıysa kendi içindeki id ve ad_soyad özelliklerini doldurur.
+        $_SESSION['hasta_id'] = $hasta->id;
+        $_SESSION['ad_soyad'] = $hasta->ad_soyad;
+        
+        // Hastayı ana sayfaya yönlendir
+        header("Location: index.php"); 
+        exit;
+
+    } else {
+        $hataMesaji = "TC Kimlik No veya Şifre hatalı!";
     }
 }
 ?>

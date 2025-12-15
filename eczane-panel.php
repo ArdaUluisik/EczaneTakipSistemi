@@ -1,6 +1,9 @@
 <?php
 session_start();
-require 'db.php';
+
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Stok.php';
 
 // Güvenlik
 if (!isset($_SESSION['personel_id'])) {
@@ -8,92 +11,54 @@ if (!isset($_SESSION['personel_id'])) {
     exit;
 }
 
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$stokYonetim = new Stok($db);
+
 $eczaneID = $_SESSION['eczane_id'];
 $eczaneAdi = $_SESSION['eczane_adi'];
 $personelAdi = $_SESSION['personel_adi'];
 $mesaj = "";
 
-// --- İŞLEM 1: SIFIRDAN YENİ İLAÇ VE STOK EKLEME ---
+// --- İŞLEM 1: SIFIRDAN YENİ İLAÇ VE STOK EKLEME (OOP) ---
 if (isset($_POST['yeni_ilac_kaydet'])) {
-    $ilacAdi = $_POST['ilac_adi'];
-    $recete = $_POST['recete_turu'];
-    $adet = $_POST['adet'];
-    $fiyat = $_POST['fiyat'];
+    // Recete Turu formdan gelmiyor olabilir, varsayılan atayalım
+    $recete = isset($_POST['recete_turu']) ? $_POST['recete_turu'] : 'Normal';
 
-    // Arka planda rastgele barkod üretelim (Veritabanı unique hatası vermesin)
-    $otomatikBarkod = rand(86900000, 86999999); 
+    $sonuc = $stokYonetim->yeniIlacVeStokEkle(
+        $eczaneID, 
+        $_POST['ilac_adi'], 
+        $recete, 
+        $_POST['adet'], 
+        $_POST['fiyat']
+    );
 
-    try {
-        $pdo->beginTransaction(); 
-
-        // 1. Önce İsimden Kontrol Et (Bu isimde ilaç var mı?)
-        $kontrol = $pdo->prepare("SELECT IlacID FROM ilaclar WHERE IlacAdi = ?");
-        $kontrol->execute([$ilacAdi]);
-        $mevcutIlac = $kontrol->fetch(PDO::FETCH_ASSOC);
-
-        if ($mevcutIlac) {
-            // İlaç zaten varsa ID'sini al
-            $yeniIlacID = $mevcutIlac['IlacID'];
-        } else {
-            // İlaç yoksa yeni ekle (Barkod otomatik, Açıklama boş)
-            $ekle = $pdo->prepare("INSERT INTO ilaclar (IlacAdi, Barkod, Aciklama, ReceteTuru) VALUES (?, ?, 'Açıklama girilmedi', ?)");
-            $ekle->execute([$ilacAdi, $otomatikBarkod, $recete]);
-            $yeniIlacID = $pdo->lastInsertId();
-        }
-
-        // 2. Şimdi Stoğa Ekle
-        $stokKontrol = $pdo->prepare("SELECT StokID FROM eczanestok WHERE EczaneID = ? AND IlacID = ?");
-        $stokKontrol->execute([$eczaneID, $yeniIlacID]);
-
-        if ($stokKontrol->rowCount() > 0) {
-            $mesaj = "<div class='alert error'><i class='fa-solid fa-triangle-exclamation'></i> Bu ilaç zaten stoğunuzda var!</div>";
-        } else {
-            $stokEkle = $pdo->prepare("INSERT INTO eczanestok (EczaneID, IlacID, Adet, Fiyat) VALUES (?, ?, ?, ?)");
-            $stokEkle->execute([$eczaneID, $yeniIlacID, $adet, $fiyat]);
-            $mesaj = "<div class='alert success'><i class='fa-solid fa-check-circle'></i> İlaç sisteme ve stoğa başarıyla eklendi.</div>";
-        }
-
-        $pdo->commit(); 
-
-    } catch (PDOException $e) {
-        $pdo->rollBack(); 
-        $mesaj = "<div class='alert error'>Hata: " . $e->getMessage() . "</div>";
+    if ($sonuc == "basarili") {
+        $mesaj = "<div class='alert success'><i class='fa-solid fa-check-circle'></i> İlaç sisteme ve stoğa başarıyla eklendi.</div>";
+    } elseif ($sonuc == "var") {
+        $mesaj = "<div class='alert error'><i class='fa-solid fa-triangle-exclamation'></i> Bu ilaç zaten stoğunuzda var!</div>";
+    } else {
+        $mesaj = "<div class='alert error'>Bir hata oluştu (" . $sonuc . ")</div>";
     }
 }
 
-// --- İŞLEM 2: STOK GÜNCELLEME ---
+// --- İŞLEM 2: STOK GÜNCELLEME (OOP) ---
 if (isset($_POST['stok_guncelle'])) {
-    $stokID = $_POST['stok_id'];
-    $adet = $_POST['adet'];
-    $fiyat = $_POST['fiyat'];
-
-    $sql = "UPDATE eczanestok SET Adet = ?, Fiyat = ? WHERE StokID = ? AND EczaneID = ?";
-    $stmt = $pdo->prepare($sql);
-    $sonuc = $stmt->execute([$adet, $fiyat, $stokID, $eczaneID]);
-
+    $sonuc = $stokYonetim->guncelle($_POST['stok_id'], $eczaneID, $_POST['adet'], $_POST['fiyat']);
+    
     if($sonuc) $mesaj = "<div class='alert success'><i class='fa-solid fa-check-circle'></i> Güncellendi.</div>";
     else $mesaj = "<div class='alert error'>Hata oluştu.</div>";
 }
 
-// --- İŞLEM 3: SİLME ---
+// --- İŞLEM 3: SİLME (OOP) ---
 if (isset($_GET['sil'])) {
-    $stokID = $_GET['sil'];
-    $sil = $pdo->prepare("DELETE FROM eczanestok WHERE StokID = ? AND EczaneID = ?");
-    $sil->execute([$stokID, $eczaneID]);
+    $stokYonetim->sil($_GET['sil'], $eczaneID);
     header("Location: eczane-panel.php");
     exit;
 }
 
-// --- VERİLERİ ÇEK ---
-$stoklar = $pdo->prepare("
-    SELECT es.*, i.IlacAdi, i.ResimYolu, i.Barkod, i.ReceteTuru
-    FROM eczanestok es 
-    JOIN ilaclar i ON es.IlacID = i.IlacID 
-    WHERE es.EczaneID = ?
-    ORDER BY es.StokID DESC
-");
-$stoklar->execute([$eczaneID]);
-$stokListesi = $stoklar->fetchAll();
+// --- VERİLERİ ÇEK (OOP) ---
+$stokListesi = $stokYonetim->listele($eczaneID);
 ?>
 
 <!DOCTYPE html>
@@ -103,6 +68,7 @@ $stokListesi = $stoklar->fetchAll();
     <title>Yönetim Paneli | <?php echo htmlspecialchars($eczaneAdi); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/index.css">
     
@@ -188,16 +154,19 @@ $stokListesi = $stoklar->fetchAll();
                         <?php foreach($stokListesi as $stok): ?>
                             <tr>
                                 <td>
-                                    <img src="<?php echo !empty($stok['ResimYolu']) ? $stok['ResimYolu'] : 'assets/img/logo.png'; ?>" 
+                                    <img src="<?php echo (!empty($stok['ResimYolu']) && file_exists($stok['ResimYolu'])) ? $stok['ResimYolu'] : 'assets/img/logo.png'; ?>" 
                                          style="width:50px; height:50px; object-fit:contain; border-radius:10px; border:1px solid #f0f0f0; padding:2px;">
                                 </td>
                                 <td>
                                     <div style="font-weight:600; color:#2c3e50; font-size:15px;"><?php echo $stok['IlacAdi']; ?></div>
                                     <?php 
+                                        // GÜVENLİK ÖNLEMİ: ReceteTuru yoksa hata verme, Normal kabul et
+                                        $receteTuru = isset($stok['ReceteTuru']) ? $stok['ReceteTuru'] : 'Normal';
+                                        
                                         $renk = '#95a5a6'; $yazi = 'Normal';
-                                        if($stok['ReceteTuru'] == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
-                                        elseif($stok['ReceteTuru'] == 'Sari') { $renk = '#f1c40f'; $yazi = 'Sarı Reçete'; }
-                                        elseif($stok['ReceteTuru'] == 'Yesil') { $renk = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
+                                        if($receteTuru == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
+                                        elseif($receteTuru == 'Sari') { $renk = '#f1c40f'; $yazi = 'Sarı Reçete'; }
+                                        elseif($receteTuru == 'Yesil') { $renk = '#2ecc71'; $yazi = 'Yeşil Reçete'; }
                                     ?>
                                     <span style="font-size:10px; font-weight:700; color:white; background:<?php echo $renk; ?>; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:3px;">
                                         <?php echo $yazi; ?>

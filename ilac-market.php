@@ -1,13 +1,19 @@
 <?php
 session_start(); 
 
+// --- 1. OOP Sınıflarını Dahil Et ---
+require_once 'classes/Database.php';
+require_once 'classes/Market.php';
+
 // GÜVENLİK: Personel giremez
 if (isset($_SESSION['personel_id'])) {
     header("Location: eczane-panel.php");
     exit;
 }
 
-require 'db.php';
+// --- 2. Sınıfları Başlat ---
+$db = Database::getInstance()->getConnection();
+$market = new Market($db);
 
 // SEPET SAYISINI HESAPLA (Navbar için)
 $sepetSayisi = 0;
@@ -34,27 +40,8 @@ if (isset($_POST['sepete_ekle'])) {
     exit;
 }
 
-try {
-    // SORGEYİ GÜNCELLEDİK: i.ReceteTuru eklendi
-    $sql = "SELECT 
-                i.IlacID, 
-                i.IlacAdi, 
-                i.Aciklama, 
-                i.ResimYolu,
-                i.ReceteTuru,  
-                MIN(es.Fiyat) as SatisFiyati
-            FROM ilaclar i
-            JOIN eczanestok es ON i.IlacID = es.IlacID
-            WHERE es.Adet > 0
-            GROUP BY i.IlacID
-            ORDER BY i.IlacID DESC";
-
-    $stmt = $pdo->query($sql);
-    $urunler = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
-    $hata = $e->getMessage();
-}
+// --- ÜRÜNLERİ ÇEK (OOP) ---
+$urunler = $market->urunleriGetir();
 ?>
 
 <!DOCTYPE html>
@@ -82,34 +69,34 @@ try {
 
     <section class="products-container">
         
-        <?php if (isset($hata)): ?>
-            <div style="grid-column: 1/-1; text-align:center; padding:40px; background:#fff5f5; color:#c53030; border-radius:15px;">
-                <h3>Veritabanı Hatası</h3> <p><?php echo $hata; ?></p>
-            </div>
-
-        <?php elseif (empty($urunler)): ?>
+        <?php if (empty($urunler)): ?>
             <div class="db-waiting-state" style="grid-column: 1/-1; text-align:center; padding:60px; background:white; border-radius:15px;">
                 <i class="fa-solid fa-box-open" style="font-size:50px; color:#e0e0e0; margin-bottom:20px;"></i>
                 <h3 style="color:#555;">Henüz Ürün Yok</h3>
+                <p style="color:#999;">Şu an markette listelenecek ürün bulunmuyor.</p>
             </div>
 
         <?php else: ?>
             <?php foreach ($urunler as $urun): ?>
                 
                 <?php 
+                    // Reçete Türü Renklendirme
                     $renk = '#3498db'; // Mavi (Normal)
                     $etiket = 'Normal Reçete';
                     $ikon = 'fa-file-prescription';
 
-                    if ($urun['ReceteTuru'] == 'Kirmizi') {
+                    // Veritabanında ReceteTuru null gelirse hata vermesin diye kontrol
+                    $receteTuru = isset($urun['ReceteTuru']) ? $urun['ReceteTuru'] : 'Normal';
+
+                    if ($receteTuru == 'Kirmizi') {
                         $renk = '#e74c3c'; 
                         $etiket = 'Kırmızı Reçete';
                         $ikon = 'fa-triangle-exclamation';
-                    } elseif ($urun['ReceteTuru'] == 'Sari') {
+                    } elseif ($receteTuru == 'Sari') {
                         $renk = '#f1c40f'; 
                         $etiket = 'Sarı Reçete';
                         $ikon = 'fa-capsules';
-                    } elseif ($urun['ReceteTuru'] == 'Yesil') {
+                    } elseif ($receteTuru == 'Yesil') {
                         $renk = '#2ecc71'; 
                         $etiket = 'Yeşil Reçete';
                         $ikon = 'fa-leaf';
@@ -118,7 +105,7 @@ try {
 
                 <div class="product-card">
                     <div class="product-image">
-                        <?php $resim = !empty($urun['ResimYolu']) ? $urun['ResimYolu'] : 'assets/img/logo.png'; ?>
+                        <?php $resim = (!empty($urun['ResimYolu']) && file_exists($urun['ResimYolu'])) ? $urun['ResimYolu'] : 'assets/img/logo.png'; ?>
                         <img src="<?php echo htmlspecialchars($resim); ?>" alt="<?php echo htmlspecialchars($urun['IlacAdi']); ?>">
                         
                         <span class="badge" style="background-color: <?php echo $renk; ?>; color: white;">
