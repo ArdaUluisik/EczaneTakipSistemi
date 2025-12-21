@@ -49,6 +49,7 @@ if (!$veri) { echo "Stok bulunamadı."; exit; }
     <title>Stok Düzenle</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="icon" href="assets/img/logo.png" type="image/png">
     <style>
         body { background: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Poppins'; }
         .edit-box { background: white; padding: 40px; border-radius: 15px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }

@@ -29,7 +29,7 @@ $siparisler = $siparisYonetim->hastaSiparisleriniGetir($hastaID);
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/main.css">
-    
+    <link rel="icon" href="assets/img/logo.png" type="image/png">
     <style>
         body { background-color: #f8f9fa; font-family: 'Poppins', sans-serif; }
         .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }

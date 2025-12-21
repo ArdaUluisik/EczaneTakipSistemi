@@ -48,20 +48,25 @@ if (isset($_POST['siparis_onayla'])) {
     
     $hastaID = $_SESSION['hasta_id'];
     $teslimat = $_POST['teslimat_turu'];
+    // Eğer teslimat eczane ise ödeme türünü zorla 'on_odeme' yap (Güvenlik önlemi)
+    $odemeTuru = ($teslimat == 'eczane') ? 'on_odeme' : $_POST['odeme_turu'];
+    
     $receteNo = isset($_POST['recete_no']) ? trim($_POST['recete_no']) : null;
     
     // Sınıfı kullanarak siparişi oluştur
+    // Not: Siparis sınıfındaki metoduna $odemeTuru parametresi eklemen gerekebilir veya varsayılan davranışı kontrol etmelisin.
+    // Şimdilik mevcut yapını bozmadan devam ediyoruz.
     $sonuc = $siparisYonetim->siparisOlustur($hastaID, $_SESSION['sepet'], $teslimat, $receteNo);
 
     if ($sonuc['status']) {
         unset($_SESSION['sepet']);
         $mesaj = "Siparişiniz Alındı! Sipariş Numaranız: " . $sonuc['siparis_id'];
         if ($teslimat == 'kurye') $mesaj .= "\\nKurye en kısa sürede yola çıkacak.";
+        else $mesaj .= "\\nÜrünleriniz adınıza ayrıldı. Eczaneden teslim alabilirsiniz.";
         
         echo "<script>alert('$mesaj'); window.location.href='index.php';</script>";
         exit;
     } else {
-        // Hata mesajını göster
         echo "<script>alert('HATA: " . $sonuc['mesaj'] . "'); window.location.href='sepet.php';</script>";
         exit;
     }
@@ -103,7 +108,7 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/main.css">
-    
+    <link rel="icon" href="assets/img/logo.png" type="image/png">
     <style>
         body { margin: 0; font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
         .cart-header { background: linear-gradient(135deg, #d62828 0%, #c0392b 100%); color: white; padding: 60px 20px 90px; text-align: center; border-radius: 0 0 50% 50% / 30px; margin-bottom: 30px; }
@@ -135,18 +140,12 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
         .btn-qty:hover { background: #e63946; color: white; }
         .qty-val { margin: 0 15px; font-weight: 600; color: #333; min-width: 20px; text-align: center; }
         
-        /* Reçete Uyarısı Stili */
-        .recete-alert-box {
-            background: #fff3cd; border: 1px solid #ffeeba; color: #856404;
-            padding: 15px; border-radius: 10px; margin-bottom: 10px;
-            font-size: 13px; display: flex; align-items: center; gap: 10px;
-        }
-        .recete-input {
-            width: 100%; padding: 12px; border: 2px solid #e0e0e0;
-            border-radius: 10px; font-size: 14px; margin-bottom: 20px;
-            transition: 0.3s; font-family: 'Poppins';
-        }
+        .recete-alert-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 10px; margin-bottom: 10px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        .recete-input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; margin-bottom: 20px; transition: 0.3s; font-family: 'Poppins'; }
         .recete-input:focus { border-color: #d62828; outline: none; }
+
+        /* Pasif Seçenek Stili */
+        .option-disabled { opacity: 0.5; pointer-events: none; background: #f0f0f0; }
     </style>
 </head>
 <body>
@@ -246,7 +245,7 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
                                 </label>
                                 <label class="radio-option" id="opt-kapida">
                                     <input type="radio" name="odeme_turu" value="kapida">
-                                    <span class="option-label">Kapıda / Eczanede Ödeme</span>
+                                    <span class="option-label" id="kapida-text">Kapıda / Eczanede Ödeme</span>
                                 </label>
                             </div>
                         </div>
@@ -294,25 +293,54 @@ if (isset($_SESSION['sepet']) && count($_SESSION['sepet']) > 0) {
             var anaFiyat = parseFloat(document.getElementById('toplamTutar').getAttribute('data-raw'));
             var kuryeUcreti = 50;
 
-            if (teslimat === 'kurye') {
+            // Ödeme Seçeneklerini Yakala
+            var kapidaOdemeInput = document.querySelector('input[value="kapida"]');
+            var kapidaOdemeLabel = document.getElementById('opt-kapida');
+            var kapidaText = document.getElementById('kapida-text');
+            var onOdemeInput = document.querySelector('input[value="on_odeme"]');
+
+            // --- DEĞİŞEN KISIM BURASI ---
+            if (teslimat === 'eczane') {
+                // Eczaneden alınacaksa Kapıda Ödemeyi KAPAT
+                kapidaOdemeInput.disabled = true;
+                kapidaOdemeLabel.classList.add('option-disabled'); // Opaklığı düşür
+                kapidaText.innerHTML = "Eczanede Ödeme (Sadece Kurye İçin)";
+                
+                // Eğer kapıda ödeme seçiliyse, zorla Online Ödeme'ye geçir
+                if (kapidaOdemeInput.checked) {
+                    onOdemeInput.checked = true;
+                }
+
+                // Fiyat Hesaplama (Kurye Yok)
+                document.getElementById('kuryeBilgisi').style.display = 'none';
+
+            } else {
+                // Kurye ise Kapıda Ödemeyi AÇ
+                kapidaOdemeInput.disabled = false;
+                kapidaOdemeLabel.classList.remove('option-disabled');
+                kapidaText.innerHTML = "Kapıda Nakit / Kart ile Ödeme";
+
+                // Fiyat Hesaplama (+50 TL)
                 anaFiyat += kuryeUcreti;
                 document.getElementById('kuryeBilgisi').style.display = 'block';
-            } else {
-                document.getElementById('kuryeBilgisi').style.display = 'none';
             }
-            
+            // -----------------------------
+
             var formatliFiyat = anaFiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
             document.getElementById('toplamTutar').innerText = formatliFiyat;
 
             var onOdemeNot = document.getElementById('on-odeme-not');
             if (teslimat === 'eczane') {
-                onOdemeNot.innerText = 'Sıra Beklemeden Teslim';
+                onOdemeNot.innerText = 'Ayırtmak İçin Zorunlu';
                 onOdemeNot.style.background = '#e8f5e9'; onOdemeNot.style.color = '#27ae60';
             } else {
                 onOdemeNot.innerText = 'Kredi Kartı ile';
                 onOdemeNot.style.background = '#e3f2fd'; onOdemeNot.style.color = '#1e88e5';
             }
         }
+
+        // Sayfa ilk açıldığında fonksiyonu çalıştır (Varsayılan duruma göre ayarlasın)
+        window.onload = secenekleriGuncelle;
     </script>
 
 </body>

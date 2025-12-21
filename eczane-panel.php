@@ -20,23 +20,19 @@ $eczaneAdi = $_SESSION['eczane_adi'];
 $personelAdi = $_SESSION['personel_adi'];
 $mesaj = "";
 
-// --- İŞLEM 1: SIFIRDAN YENİ İLAÇ VE STOK EKLEME ---
-if (isset($_POST['yeni_ilac_kaydet'])) {
-    // Varsayılan olarak Beyaz ata
-    $recete = isset($_POST['recete_turu']) ? $_POST['recete_turu'] : 'Beyaz';
+// --- İŞLEM 1: LİSTEDEN İLAÇ SEÇİP STOK EKLEME (GÜNCELLENDİ) ---
+if (isset($_POST['yeni_stok_kaydet'])) {
+    // Formdan artık İsim değil, ID geliyor
+    $secilenIlacID = $_POST['ilac_id']; 
+    $adet = $_POST['adet'];
+    $fiyat = $_POST['fiyat'];
 
-    $sonuc = $stokYonetim->yeniIlacVeStokEkle(
-        $eczaneID, 
-        $_POST['ilac_adi'], 
-        $recete, 
-        $_POST['adet'], 
-        $_POST['fiyat']
-    );
+    $sonuc = $stokYonetim->stokEkle($eczaneID, $secilenIlacID, $adet, $fiyat);
 
     if ($sonuc == "basarili") {
-        $mesaj = "<div class='alert success'><i class='fa-solid fa-check-circle'></i> İlaç sisteme ve stoğa başarıyla eklendi.</div>";
+        $mesaj = "<div class='alert success'><i class='fa-solid fa-check-circle'></i> İlaç stoğunuza başarıyla eklendi.</div>";
     } elseif ($sonuc == "var") {
-        $mesaj = "<div class='alert error'><i class='fa-solid fa-triangle-exclamation'></i> Bu ilaç zaten stoğunuzda var!</div>";
+        $mesaj = "<div class='alert error'><i class='fa-solid fa-triangle-exclamation'></i> Bu ilaç zaten listenizde var! Lütfen 'Düzenle' butonunu kullanın.</div>";
     } else {
         $mesaj = "<div class='alert error'>Bir hata oluştu (" . $sonuc . ")</div>";
     }
@@ -58,6 +54,8 @@ if (isset($_GET['sil'])) {
 
 // --- VERİLERİ ÇEK ---
 $stokListesi = $stokYonetim->listele($eczaneID);
+// Dropdown için tüm ilaç listesini çekiyoruz
+$tumIlaclar = $stokYonetim->tumIlaclariGetir();
 ?>
 
 <!DOCTYPE html>
@@ -67,7 +65,7 @@ $stokListesi = $stokYonetim->listele($eczaneID);
     <title>Yönetim Paneli | <?php echo htmlspecialchars($eczaneAdi); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <link rel="icon" href="assets/img/logo.png" type="image/png">
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/index.css">
     
@@ -119,7 +117,7 @@ $stokListesi = $stokYonetim->listele($eczaneID);
             </div>
             
             <button onclick="openModal('addModal')" class="btn-add">
-                <i class="fa-solid fa-plus-circle"></i> Yeni İlaç Tanımla
+                <i class="fa-solid fa-plus-circle"></i> Stok Ekle
             </button>
         </div>
 
@@ -161,7 +159,6 @@ $stokListesi = $stokYonetim->listele($eczaneID);
                                     <?php 
                                         $receteTuru = isset($stok['ReceteTuru']) ? $stok['ReceteTuru'] : 'Beyaz';
                                         
-                                        // YENİ RENK KODLARI
                                         $renk = '#95a5a6'; $yazi = 'Beyaz Reçete';
                                         if($receteTuru == 'Kirmizi') { $renk = '#e74c3c'; $yazi = 'Kırmızı Reçete'; }
                                         elseif($receteTuru == 'Turuncu') { $renk = '#f39c12'; $yazi = 'Turuncu Reçete'; }
@@ -213,34 +210,30 @@ $stokListesi = $stokYonetim->listele($eczaneID);
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('addModal')">&times;</span>
             <div style="text-align:center; margin-bottom:25px;">
-                <h3 style="margin:0; color:#333;">Yeni İlaç Kaydı</h3>
+                <h3 style="margin:0; color:#333;">Stok Ekle</h3>
+                <small style="color:#666;">Merkezi listeden ilaç seçin</small>
             </div>
             
             <form method="POST">
-                
-                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px;">
-                    <div>
-                        <label>İlaç Adı</label>
-                        <input type="text" name="ilac_adi" class="form-control" placeholder="Örn: Parol 500mg" required>
-                    </div>
-                    <div>
-                        <label>Reçete Türü</label>
-                        <select name="recete_turu" class="form-control" required>
-                            <option value="Beyaz">⚪ Beyaz</option>
-                            <option value="Kirmizi">🔴 Kırmızı</option>
-                            <option value="Yesil">🟢 Yeşil</option>
-                            <option value="Turuncu">🟠 Turuncu</option>
-                            <option value="Mor">🟣 Mor</option>
-                        </select>
-                    </div>
+                <div style="margin-bottom:15px;">
+                    <label>İlaç Seçiniz</label>
+                    <select name="ilac_id" class="form-control" required style="cursor:pointer;">
+                        <option value="">-- Listeden Seçiniz --</option>
+                        <?php foreach($tumIlaclar as $ilac): ?>
+                            <option value="<?php echo $ilac['IlacID']; ?>">
+                                <?php echo $ilac['IlacAdi']; ?> 
+                                (<?php echo $ilac['Barkod']; ?> - <?php echo $ilac['ReceteTuru']; ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div><label>Stok Adedi</label><input type="number" name="adet" class="form-control" required min="0"></div>
-                    <div><label>Birim Fiyat (₺)</label><input type="number" name="fiyat" class="form-control" step="0.01" required min="0"></div>
+                    <div><label>Stok Adedi</label><input type="number" name="adet" class="form-control" required min="0" placeholder="0"></div>
+                    <div><label>Birim Fiyat (₺)</label><input type="number" name="fiyat" class="form-control" step="0.01" required min="0" placeholder="0.00"></div>
                 </div>
 
-                <button type="submit" name="yeni_ilac_kaydet" class="btn-add" style="width:100%; justify-content:center;">Kaydet ve Ekle</button>
+                <button type="submit" name="yeni_stok_kaydet" class="btn-add" style="width:100%; justify-content:center;">Listeye Ekle</button>
             </form>
         </div>
     </div>
@@ -252,7 +245,7 @@ $stokListesi = $stokYonetim->listele($eczaneID);
             <form method="POST">
                 <input type="hidden" name="stok_id" id="edit_stok_id">
                 <label>İlaç Adı</label>
-                <input type="text" id="edit_ilac_adi" class="form-control" readonly style="background:#f0f0f0;">
+                <input type="text" id="edit_ilac_adi" class="form-control" readonly style="background:#f0f0f0; color:#888;">
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                     <div><label>Yeni Stok</label><input type="number" name="adet" id="edit_adet" class="form-control" required></div>
                     <div><label>Yeni Fiyat</label><input type="number" name="fiyat" id="edit_fiyat" class="form-control" step="0.01" required></div>
