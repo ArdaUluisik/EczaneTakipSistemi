@@ -50,7 +50,7 @@ $bilgi = $hastaNesnesi->bilgileriGetir($hastaID);
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/index.css">
     <link rel="stylesheet" href="assets/css/login.css">
-    
+    <link rel="icon" href="assets/img/logo.png" type="image/png">
     <style>
         body { background-color: #f8f9fa; display: block !important; }
         .settings-wrapper {

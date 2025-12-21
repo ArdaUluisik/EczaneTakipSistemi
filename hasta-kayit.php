@@ -1,43 +1,50 @@
 <?php
-// --- 1. OOP Sınıflarını Dahil Et ---
+// DOSYA ADI: hasta-kayit.php
+session_start();
+
+// 1. OOP Sınıflarını Dahil Et
 require_once 'classes/Database.php';
 require_once 'classes/Hasta.php';
 
-$mesaj = "";
-$mesajTuru = ""; 
+// Zaten giriş yapmışsa ana sayfaya at
+if (isset($_SESSION['hasta_id'])) {
+    header("Location: index.php");
+    exit;
+}
 
-if ($_POST) {
-    // Form verilerini al
+$mesaj = "";
+$mesajTuru = "";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // 2. Veritabanı Bağlantısı ve Sınıf Başlatma
+    $db = Database::getInstance()->getConnection();
+    $hasta = new Hasta($db);
+
+    // Formdan gelen verileri al
     $tc = $_POST['tc'];
     $adsoyad = $_POST['adsoyad'];
     $telefon = $_POST['telefon'];
     $adres = $_POST['adres'];
     $sifre = $_POST['sifre'];
 
-    // Basit doğrulama (Boş alan kontrolü)
+    // 3. Basit Boş Alan Kontrolü
     if (empty($tc) || empty($adsoyad) || empty($sifre)) {
         $mesaj = "Lütfen zorunlu alanları (TC, Ad Soyad, Şifre) doldurunuz.";
         $mesajTuru = "error";
     } else {
-        // --- 2. Sınıfları Başlat ve Kayıt Ol ---
-        // Veritabanı bağlantısını Singleton deseninden alıyoruz
-        $db = Database::getInstance()->getConnection();
-        
-        // Hasta sınıfını başlatıyoruz
-        $hasta = new Hasta($db);
-
-        // Sınıfın içindeki kayitOl metodunu çağırıyoruz (Stored Procedure burada çalışır)
+        // 4. Sınıfın 'kayitOl' fonksiyonunu çağır
+        // Senin sınıfında bu fonksiyon parametre alacak şekilde yazılmış.
         $sonuc = $hasta->kayitOl($tc, $adsoyad, $telefon, $adres, $sifre);
 
-        // Sonucu işle (Prosedürden dönen Sonuc: 1 ise Başarılı, 0 ise Hata)
-        if ($sonuc['Sonuc'] == 1) {
-            // Başarılı
+        // Class'taki fonksiyon 'Sonuc' ve 'Mesaj' içeren bir dizi (array) döndürüyor.
+        if (isset($sonuc['Sonuc']) && $sonuc['Sonuc'] == 1) {
             $mesaj = "✅ " . $sonuc['Mesaj'] . " Giriş sayfasına yönlendiriliyorsunuz...";
             $mesajTuru = "success";
-            header("refresh:2;url=hasta-login.php"); 
+            header("refresh:2;url=hasta-login.php"); // 2 saniye sonra yönlendir
         } else {
-            // Hata (Zaten kayıtlı vb.)
-            $mesaj = "❌ " . $sonuc['Mesaj'];
+            // Veritabanından gelen hata mesajı (Örn: Zaten kayıtlı)
+            $hataMetni = isset($sonuc['Mesaj']) ? $sonuc['Mesaj'] : "Bir hata oluştu.";
+            $mesaj = "❌ " . $hataMetni;
             $mesajTuru = "error";
         }
     }
@@ -50,7 +57,7 @@ if ($_POST) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>e-Ecza | Hasta Kayıt</title>
-    
+    <link rel="icon" href="assets/img/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -81,9 +88,9 @@ if ($_POST) {
                 <p>İlaç takibi ve kolay sipariş için hemen hesap oluşturun.</p>
             </div>
 
-            <?php if ($mesaj != ""): ?>
+            <?php if (!empty($mesaj)): ?>
                 <div style="padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-size: 14px; font-weight: 500;
-                    <?php echo ($mesajTuru == 'success') ? 'background:#d4edda; color:#155724;' : 'background:#f8d7da; color:#721c24;'; ?>">
+                    <?php echo ($mesajTuru == 'success') ? 'background:#d4edda; color:#155724; border: 1px solid #c3e6cb;' : 'background:#f8d7da; color:#721c24; border: 1px solid #f5c6cb;'; ?>">
                     <?php echo $mesaj; ?>
                 </div>
             <?php endif; ?>
